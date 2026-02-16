@@ -25,6 +25,35 @@ def _split_on_words(text: str, max_len: int) -> list[str]:
     return chunks
 
 
+def _split_on_clauses(text: str, max_len: int) -> list[str]:
+    """Split text on clause boundaries (commas, semicolons) to fit within max_len.
+    Falls back to word boundaries if a single clause is still too long."""
+    import re
+    # Split after commas and semicolons, keeping the delimiter with the preceding clause
+    clauses = re.split(r"(?<=[,;]) ", text)
+
+    chunks = []
+    current = ""
+    for clause in clauses:
+        if len(clause) > max_len:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.extend(_split_on_words(clause, max_len))
+            continue
+
+        test = f"{current} {clause}".strip() if current else clause
+        if len(test) <= max_len:
+            current = test
+        else:
+            if current:
+                chunks.append(current)
+            current = clause
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     """
     Split a formatted post into tweet-sized chunks for threading.
@@ -59,14 +88,15 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     import re
     raw_sentences = re.split(r"(?<=\.) (?=[A-Z])|(?<=;) ", body)
 
-    # Further break any sentence that's too long on word boundaries
+    # Further break any sentence that's too long on clause boundaries
+    # (commas, semicolons), with word-boundary fallback
     usable = max_len - overhead
     sentences = []
     for s in raw_sentences:
         if len(s) <= usable:
             sentences.append(s)
         else:
-            sentences.extend(_split_on_words(s, usable))
+            sentences.extend(_split_on_clauses(s, usable))
 
     # Build tweet 1: header + as much body as fits
     tweets = []
