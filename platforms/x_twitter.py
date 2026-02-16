@@ -84,19 +84,21 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     # Thread numbering overhead: " [X/X]"
     overhead = 7
 
-    # Split body into sentence-level fragments
+    # Split body into individual clause-level fragments for flexible packing.
+    # This lets tweet 1 (which has less space due to the header) still get
+    # body content instead of being wasted on just the header.
     import re
+    usable = max_len - overhead
     raw_sentences = re.split(r"(?<=\.) (?=[A-Z])|(?<=;) ", body)
 
-    # Further break any sentence that's too long on clause boundaries
-    # (commas, semicolons), with word-boundary fallback
-    usable = max_len - overhead
     sentences = []
     for s in raw_sentences:
-        if len(s) <= usable:
-            sentences.append(s)
-        else:
-            sentences.extend(_split_on_clauses(s, usable))
+        clause_parts = re.split(r"(?<=[,;]) ", s)
+        for cp in clause_parts:
+            if len(cp) <= usable:
+                sentences.append(cp)
+            else:
+                sentences.extend(_split_on_words(cp, usable))
 
     # Build tweet 1: header + as much body as fits
     tweets = []
