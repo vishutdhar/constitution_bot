@@ -177,9 +177,10 @@ def main():
     day_num = args.day if args.day else state["current_day"]
 
     if day_num > total_days:
-        print(f"🎉 All {total_days} days have been posted! The full Constitution has been shared.")
-        print("   Use --reset to start over, or --day N to repost a specific day.")
-        return
+        day_num = 1
+        state["current_day"] = 1
+        save_state(state)
+        print(f"🔄 Completed all {total_days} days. Looping back to Day 1.")
 
     # Find the post entry
     entry = next((p for p in posts if p["day"] == day_num), None)
