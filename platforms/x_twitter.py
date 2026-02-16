@@ -181,7 +181,7 @@ class XTwitterPlatform(BasePlatform):
         return 1400
 
     def authenticate(self) -> None:
-        """Create an authenticated Tweepy v2 client."""
+        """Create authenticated Tweepy v2 client."""
         self._client = tweepy.Client(
             consumer_key=self._api_key,
             consumer_secret=self._api_secret,
