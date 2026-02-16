@@ -126,9 +126,10 @@ def init_platforms() -> list:
         "api_secret": os.getenv("X_API_SECRET"),
         "access_token": os.getenv("X_ACCESS_TOKEN"),
         "access_token_secret": os.getenv("X_ACCESS_TOKEN_SECRET"),
+        "handle": os.getenv("X_HANDLE", "USC1787"),
     }
 
-    if all(x_keys.values()):
+    if all(v for k, v in x_keys.items() if k != "handle"):
         x = XTwitterPlatform(**x_keys)
         x.authenticate()
         platforms.append(x)

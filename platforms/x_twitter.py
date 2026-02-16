@@ -159,11 +159,13 @@ class XTwitterPlatform(BasePlatform):
         api_secret: str,
         access_token: str,
         access_token_secret: str,
+        handle: str = "USC1787",
     ):
         self._api_key = api_key
         self._api_secret = api_secret
         self._access_token = access_token
         self._access_token_secret = access_token_secret
+        self._handle = handle
         self._client: tweepy.Client | None = None
         self._username: str | None = None
 
@@ -184,8 +186,7 @@ class XTwitterPlatform(BasePlatform):
             access_token=self._access_token,
             access_token_secret=self._access_token_secret,
         )
-        me = self._client.get_me()
-        self._username = me.data.username
+        self._username = self._handle
         print(f"✅ Authenticated as @{self._username}")
 
     def post(self, text: str) -> dict:
