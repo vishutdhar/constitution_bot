@@ -372,6 +372,9 @@ def main():
         save_state(state)
         print(f"\n📅 Next scheduled: Day {day_num + 1}")
 
+    if not all_success:
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

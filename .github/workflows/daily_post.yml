@@ -1,14 +1,20 @@
-# Post one section of the U.S. Constitution daily at 9:00 AM ET.
+# Post one section of the U.S. Constitution daily at 5:00 AM ET.
 # State is persisted via git commit back to the repo.
 
 name: Daily Constitution Post
 
 on:
   schedule:
-    # 5:00 AM Eastern = 10:00 UTC (EST) or 09:00 UTC (EDT)
-    # Using 10:00 UTC for EST. Shifts to 6 AM EDT in summer.
-    - cron: "0 10 * * *"
+    # Two crons cover both EST and EDT. The timezone check below
+    # ensures only the correct one actually posts.
+    - cron: "0 10 * * *"  # 10:00 UTC = 5 AM EST (winter)
+    - cron: "0 9 * * *"   # 09:00 UTC = 5 AM EDT (summer)
   workflow_dispatch: # Allow manual trigger from GitHub UI
+
+# Prevent overlapping runs (e.g., manual trigger during scheduled run)
+concurrency:
+  group: daily-post
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -18,18 +24,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check if 5 AM ET
+        if: github.event_name == 'schedule'
+        run: |
+          HOUR=$(TZ="America/New_York" date +%H)
+          echo "Current ET hour: ${HOUR}"
+          if [ "$HOUR" != "05" ]; then
+            echo "Not 5 AM ET — skipping this cron trigger."
+            echo "SKIP=true" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout repo
+        if: env.SKIP != 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: env.SKIP != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: env.SKIP != 'true'
         run: pip install -r requirements.txt
 
       - name: Post today's section
+        id: post
+        if: env.SKIP != 'true'
+        continue-on-error: true
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
@@ -37,10 +59,32 @@ jobs:
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: python bot.py
 
+      - name: Retry post on failure
+        id: retry
+        if: env.SKIP != 'true' && steps.post.outcome == 'failure'
+        continue-on-error: true
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          echo "⏳ First attempt failed. Retrying in 60 seconds..."
+          sleep 60
+          python bot.py
+
       - name: Commit updated state
+        if: env.SKIP != 'true' && (steps.post.outcome == 'success' || steps.retry.outcome == 'success')
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
           git add state.json post_log.json
           git diff --cached --quiet || git commit -m "📜 Posted day $(python -c 'import json; print(json.load(open("state.json"))["current_day"] - 1)')"
+          git pull --rebase
           git push
+
+      - name: Fail if post was unsuccessful
+        if: env.SKIP != 'true' && steps.post.outcome == 'failure' && steps.retry.outcome != 'success'
+        run: |
+          echo "❌ Both post attempts failed. Check logs above."
+          exit 1
