@@ -1,6 +1,7 @@
 """
 X (Twitter) platform integration using Tweepy and the X API v2.
 Automatically threads posts that exceed 280 characters.
+Supports image uploads via the v1.1 API.
 """
 
 import tweepy
@@ -152,6 +153,57 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     return tweets
 
 
+def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
+    """
+    Split plain body text into tweet-sized reply chunks.
+
+    Simpler than split_into_thread — no header/hashtag handling.
+    Used for the reply thread below an image tweet.
+    Adds [1/N] numbering when multiple chunks are needed.
+    """
+    import re
+
+    # Reserve space for numbering: " [X/XX]" = up to 7 chars
+    overhead = 7
+    usable = max_len - overhead
+
+    if len(text) <= max_len:
+        return [text]
+
+    # Split on sentence boundaries first, then clause boundaries
+    raw_sentences = re.split(r"(?<=\.) (?=[A-Z])|(?<=;) ", text)
+
+    fragments = []
+    for s in raw_sentences:
+        clause_parts = re.split(r"(?<=[,;]) ", s)
+        for cp in clause_parts:
+            if len(cp) <= usable:
+                fragments.append(cp)
+            else:
+                fragments.extend(_split_on_words(cp, usable))
+
+    # Pack fragments into tweet-sized chunks
+    chunks = []
+    current = ""
+    for frag in fragments:
+        test = f"{current} {frag}".strip() if current else frag
+        if len(test) <= usable:
+            current = test
+        else:
+            if current:
+                chunks.append(current)
+            current = frag
+    if current:
+        chunks.append(current)
+
+    # Add numbering
+    total = len(chunks)
+    if total > 1:
+        chunks = [f"{c} [{i+1}/{total}]" for i, c in enumerate(chunks)]
+
+    return chunks
+
+
 class XTwitterPlatform(BasePlatform):
     """Post to X (formerly Twitter) using API v2. Auto-threads long posts."""
 
@@ -169,6 +221,7 @@ class XTwitterPlatform(BasePlatform):
         self._access_token_secret = access_token_secret
         self._handle = handle
         self._client: tweepy.Client | None = None
+        self._api_v1: tweepy.API | None = None
         self._username: str | None = None
 
     @property
@@ -181,19 +234,99 @@ class XTwitterPlatform(BasePlatform):
         return 1400
 
     def authenticate(self) -> None:
-        """Create authenticated Tweepy v2 client."""
+        """Create authenticated Tweepy v2 client and v1.1 API for media uploads."""
         self._client = tweepy.Client(
             consumer_key=self._api_key,
             consumer_secret=self._api_secret,
             access_token=self._access_token,
             access_token_secret=self._access_token_secret,
         )
+
+        # v1.1 API needed for media_upload() — same credentials, different API surface
+        auth = tweepy.OAuth1UserHandler(
+            self._api_key,
+            self._api_secret,
+            self._access_token,
+            self._access_token_secret,
+        )
+        self._api_v1 = tweepy.API(auth)
+
         self._username = self._handle
         print(f"✅ Authenticated as @{self._username}")
 
-    def post(self, text: str) -> dict:
+    def _upload_image(self, image_path: str) -> str | None:
         """
-        Post a tweet or auto-thread.
+        Upload an image via the v1.1 API.
+
+        Returns:
+            media_id string on success, None on failure.
+        """
+        if self._api_v1 is None:
+            print("⚠️  v1.1 API not initialized — cannot upload image")
+            return None
+
+        try:
+            media = self._api_v1.media_upload(filename=image_path)
+            media_id = str(media.media_id)
+            print(f"✅ Image uploaded (media_id: {media_id})")
+            return media_id
+        except tweepy.TweepyException as e:
+            print(f"⚠️  Image upload failed: {e}")
+            return None
+
+    def _post_text_only(self, text: str) -> dict:
+        """Post using text-only flow (existing behavior). Used as fallback."""
+        tweets = split_into_thread(text)
+
+        if len(tweets) == 1:
+            response = self._client.create_tweet(text=tweets[0])
+            tweet_id = response.data["id"]
+            url = f"https://x.com/{self._username}/status/{tweet_id}"
+            print(f"✅ Posted to X: {url}")
+        else:
+            print(f"🧵 Posting thread ({len(tweets)} tweets)...")
+            first_response = self._client.create_tweet(text=tweets[0])
+            first_id = first_response.data["id"]
+            previous_id = first_id
+
+            for tweet_text in tweets[1:]:
+                response = self._client.create_tweet(
+                    text=tweet_text,
+                    in_reply_to_tweet_id=previous_id,
+                )
+                previous_id = response.data["id"]
+
+            tweet_id = first_id
+            url = f"https://x.com/{self._username}/status/{first_id}"
+            print(f"✅ Posted thread to X: {url}")
+
+        return {
+            "success": True,
+            "url": url,
+            "tweet_id": tweet_id,
+            "thread_length": len(tweets),
+            "error": None,
+        }
+
+    def post(
+        self,
+        text: str,
+        *,
+        image_path: str | None = None,
+        image_text: str | None = None,
+        body_text: str | None = None,
+    ) -> dict:
+        """
+        Post a tweet, optionally with an image and reply thread.
+
+        When image_path is provided:
+          1. Upload image via v1.1 API
+          2. Post image tweet (image_text + image)
+          3. Post body_text as reply thread below the image tweet
+          If image upload fails, falls back to text-only posting.
+
+        When image_path is not provided:
+          Posts text-only using existing split_into_thread() logic.
 
         Returns:
             dict with success, url, tweet_id, thread_length, error keys.
@@ -202,35 +335,51 @@ class XTwitterPlatform(BasePlatform):
             raise RuntimeError("Call authenticate() before posting.")
 
         try:
-            tweets = split_into_thread(text)
+            # --- Text-only mode (no image provided) ---
+            if not image_path:
+                return self._post_text_only(text)
 
-            if len(tweets) == 1:
-                response = self._client.create_tweet(text=tweets[0])
-                tweet_id = response.data["id"]
-                url = f"https://x.com/{self._username}/status/{tweet_id}"
-                print(f"✅ Posted to X: {url}")
-            else:
-                print(f"🧵 Posting thread ({len(tweets)} tweets)...")
-                first_response = self._client.create_tweet(text=tweets[0])
-                first_id = first_response.data["id"]
+            # --- Image mode ---
+            media_id = self._upload_image(image_path)
+
+            if media_id is None:
+                # Fallback: image upload failed, post text-only
+                print("⚠️  Falling back to text-only post")
+                return self._post_text_only(text)
+
+            # Post image tweet
+            caption = image_text or text
+            response = self._client.create_tweet(
+                text=caption,
+                media_ids=[media_id],
+            )
+            first_id = response.data["id"]
+            url = f"https://x.com/{self._username}/status/{first_id}"
+            print(f"✅ Posted image tweet to X: {url}")
+
+            thread_count = 1
+
+            # Post body text as reply thread
+            if body_text:
+                reply_chunks = split_text_for_replies(body_text)
                 previous_id = first_id
 
-                for tweet_text in tweets[1:]:
+                print(f"🧵 Posting reply thread ({len(reply_chunks)} replies)...")
+                for chunk in reply_chunks:
                     response = self._client.create_tweet(
-                        text=tweet_text,
+                        text=chunk,
                         in_reply_to_tweet_id=previous_id,
                     )
                     previous_id = response.data["id"]
 
-                tweet_id = first_id
-                url = f"https://x.com/{self._username}/status/{first_id}"
-                print(f"✅ Posted thread to X: {url}")
+                thread_count += len(reply_chunks)
+                print(f"✅ Reply thread complete ({thread_count} total tweets)")
 
             return {
                 "success": True,
                 "url": url,
-                "tweet_id": tweet_id,
-                "thread_length": len(tweets),
+                "tweet_id": first_id,
+                "thread_length": thread_count,
                 "error": None,
             }
 

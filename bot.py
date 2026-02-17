@@ -10,6 +10,7 @@ Usage:
     python bot.py --dry-run    # Alias for --preview
     python bot.py --day 46     # Post (or preview) a specific day
     python bot.py --reset      # Reset progress to day 1
+    python bot.py --validate   # Verify all 77 days have valid image mappings
 """
 
 import argparse
@@ -28,6 +29,8 @@ BASE_DIR = Path(__file__).parent
 POSTS_FILE = BASE_DIR / "constitution_posts.json"
 STATE_FILE = BASE_DIR / "state.json"
 LOG_FILE = BASE_DIR / "post_log.json"
+IMAGE_MAPPING_FILE = BASE_DIR / "image_mapping.json"
+IMAGES_DIR = BASE_DIR / "images"
 
 # ---------------------------------------------------------------------------
 # Hashtags appended to every post (customize as you like)
@@ -69,7 +72,7 @@ def load_posts() -> list[dict]:
 
 def format_post(entry: dict, total_days: int) -> str:
     """
-    Format a constitution entry into a tweet.
+    Format a constitution entry into a tweet (text-only fallback format).
 
     Template:
         📜 Day X/77 — {Section}
@@ -82,6 +85,91 @@ def format_post(entry: dict, total_days: int) -> str:
     body = entry["text"]
     tweet = f"{header}\n\n{body}\n\n{HASHTAGS}"
     return tweet
+
+
+def format_image_text(entry: dict) -> str:
+    """
+    Format the caption for the image tweet (tweet 1).
+    Clean and eye-catching — no "Day X/77" counter.
+
+    Template:
+        📜 {Section}
+
+        #Constitution #WeThePeople
+    """
+    return f"📜 {entry['section']}\n\n{HASHTAGS}"
+
+
+# ---------------------------------------------------------------------------
+# Image mapping
+# ---------------------------------------------------------------------------
+def load_image_mapping() -> dict:
+    """Load the day-to-image filename mapping from JSON."""
+    if not IMAGE_MAPPING_FILE.exists():
+        return {}
+    with open(IMAGE_MAPPING_FILE) as f:
+        return json.load(f)
+
+
+def resolve_image_path(day_num: int, mapping: dict) -> str | None:
+    """
+    Look up the image for a given day and verify it exists on disk.
+
+    Returns:
+        Absolute path string if found, None otherwise.
+    """
+    filename = mapping.get(str(day_num))
+    if not filename:
+        return None
+
+    image_path = IMAGES_DIR / filename
+    if not image_path.exists():
+        print(f"⚠️  Image file not found: {image_path}")
+        return None
+
+    return str(image_path)
+
+
+def validate_all_mappings(posts: list[dict], mapping: dict) -> bool:
+    """
+    Verify every day in constitution_posts.json has a valid image mapping
+    and the referenced image file exists on disk.
+
+    Returns True if all valid, False if any errors found.
+    """
+    errors = []
+    total = len(posts)
+
+    print(f"\n{'='*60}")
+    print(f"  Validating image mappings for {total} days")
+    print(f"{'='*60}\n")
+
+    for entry in posts:
+        day = entry["day"]
+        day_str = str(day)
+
+        if day_str not in mapping:
+            errors.append(f"  Day {day} ({entry['section']}): NO MAPPING")
+            continue
+
+        filename = mapping[day_str]
+        image_path = IMAGES_DIR / filename
+
+        if not image_path.exists():
+            errors.append(f"  Day {day} ({entry['section']}): FILE MISSING → {filename}")
+
+    if errors:
+        print(f"❌ Found {len(errors)} error(s):\n")
+        for err in errors:
+            print(err)
+        print()
+        return False
+
+    # Count unique images used
+    unique_images = set(mapping.values())
+    print(f"✅ All {total} days have valid image mappings")
+    print(f"   {len(unique_images)} unique images used across {total} days\n")
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +250,7 @@ def main():
     parser.add_argument("--preview", "--dry-run", action="store_true", help="Preview the post without publishing")
     parser.add_argument("--day", type=int, help="Post a specific day number instead of the next in sequence")
     parser.add_argument("--reset", action="store_true", help="Reset progress to day 1")
+    parser.add_argument("--validate", action="store_true", help="Verify all 77 days have valid image mappings")
     args = parser.parse_args()
 
     if args.reset:
@@ -172,6 +261,12 @@ def main():
     posts = load_posts()
     total_days = len(posts)
     state = load_state()
+    image_mapping = load_image_mapping()
+
+    # Validate mode — check all mappings and exit
+    if args.validate:
+        valid = validate_all_mappings(posts, image_mapping)
+        sys.exit(0 if valid else 1)
 
     # Determine which day to post
     day_num = args.day if args.day else state["current_day"]
@@ -188,23 +283,54 @@ def main():
         print(f"❌ No post found for day {day_num}")
         sys.exit(1)
 
-    # Format the tweet
-    tweet = format_post(entry, total_days)
+    # Resolve image for this day
+    image_path = resolve_image_path(day_num, image_mapping)
 
+    # Build text components
+    fallback_tweet = format_post(entry, total_days)  # Full text-only format
+    image_text = format_image_text(entry)             # Image tweet caption
+    body_text = entry["text"]                         # Constitutional text for replies
+
+    # Display preview
     print(f"\n{'='*60}")
     print(f"  Day {day_num}/{total_days} — {entry['section']}")
     print(f"{'='*60}")
-    print(tweet)
-    print(f"{'='*60}")
-    print(f"  Characters: {len(tweet)}")
-    print(f"{'='*60}\n")
+
+    if image_path:
+        print(f"\n  🖼️  IMAGE TWEET (Tweet 1):")
+        print(f"  {'-'*56}")
+        print(f"  {image_text}")
+        print(f"  + image: {Path(image_path).name}")
+        print(f"  ({len(image_text)} chars)")
+        print(f"\n  💬 REPLY THREAD (Tweet 2+):")
+        print(f"  {'-'*56}")
+        print(f"  {body_text}")
+        print(f"  ({len(body_text)} chars)")
+    else:
+        print(f"\n  📝 TEXT-ONLY (no image found):")
+        print(f"  {'-'*56}")
+        print(f"  {fallback_tweet}")
+        print(f"  ({len(fallback_tweet)} chars)")
+
+    print(f"\n{'='*60}\n")
 
     # Preview mode — stop here
     if args.preview:
-        if len(tweet) > 280:
-            print(f"⚠️  Warning: Tweet is {len(tweet)} chars (limit: 280)")
+        if image_path:
+            print(f"✅ Image post ready — {Path(image_path).name}")
+            if len(body_text) > 280:
+                from platforms.x_twitter import split_text_for_replies
+                chunks = split_text_for_replies(body_text)
+                print(f"   Reply thread will be {len(chunks)} tweet(s)")
+                for i, chunk in enumerate(chunks):
+                    print(f"\n   Reply [{i+1}/{len(chunks)}] ({len(chunk)} chars):")
+                    print(f"   {chunk}")
         else:
-            print("✅ Tweet fits within 280 character limit.")
+            print("⚠️  No image available — will post text-only")
+            if len(fallback_tweet) > 280:
+                from platforms.x_twitter import split_into_thread
+                chunks = split_into_thread(fallback_tweet)
+                print(f"   Thread will be {len(chunks)} tweet(s)")
         return
 
     # Initialize platforms and post
@@ -217,12 +343,17 @@ def main():
 
     all_success = True
     for platform in platforms:
-        if not platform.validate_length(tweet):
-            print(f"⚠️  Post too long for {platform.name} ({len(tweet)} > {platform.max_length})")
+        if not platform.validate_length(fallback_tweet):
+            print(f"⚠️  Post too long for {platform.name} ({len(fallback_tweet)} > {platform.max_length})")
             all_success = False
             continue
 
-        result = platform.post(tweet)
+        result = platform.post(
+            fallback_tweet,
+            image_path=image_path,
+            image_text=image_text,
+            body_text=body_text,
+        )
         log_post(entry, result, platform.name)
 
         if not result["success"]:

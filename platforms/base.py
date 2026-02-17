@@ -27,12 +27,22 @@ class BasePlatform(ABC):
         pass
 
     @abstractmethod
-    def post(self, text: str) -> dict:
+    def post(
+        self,
+        text: str,
+        *,
+        image_path: str | None = None,
+        image_text: str | None = None,
+        body_text: str | None = None,
+    ) -> dict:
         """
         Publish a post to the platform.
 
         Args:
-            text: The text content to post.
+            text: Full text content (used as fallback if image upload fails).
+            image_path: Optional path to an image file to attach.
+            image_text: Optional caption for the image tweet (used as tweet 1).
+            body_text: Optional constitutional text posted as reply thread.
 
         Returns:
             dict with at least {"success": bool, "url": str | None, "error": str | None}
