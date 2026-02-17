@@ -1,14 +1,12 @@
-# Post one section of the U.S. Constitution daily at 5:00 AM ET.
+# Post one section of the U.S. Constitution daily at ~4 AM ET.
+# 09:00 UTC = 4 AM EST (winter) / 5 AM EDT (summer).
 # State is persisted via git commit back to the repo.
 
 name: Daily Constitution Post
 
 on:
   schedule:
-    # Two crons cover both EST and EDT. The timezone check below
-    # ensures only the correct one actually posts.
-    - cron: "0 10 * * *"  # 10:00 UTC = 5 AM EST (winter)
-    - cron: "0 9 * * *"   # 09:00 UTC = 5 AM EDT (summer)
+    - cron: "0 9 * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 # Prevent overlapping runs (e.g., manual trigger during scheduled run)
@@ -24,33 +22,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if 5 AM ET
-        if: github.event_name == 'schedule'
-        run: |
-          HOUR=$(TZ="America/New_York" date +%H)
-          echo "Current ET hour: ${HOUR}"
-          if [ "$HOUR" != "05" ]; then
-            echo "Not 5 AM ET — skipping this cron trigger."
-            echo "SKIP=true" >> "$GITHUB_ENV"
-          fi
-
       - name: Checkout repo
-        if: env.SKIP != 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
-        if: env.SKIP != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        if: env.SKIP != 'true'
         run: pip install -r requirements.txt
 
       - name: Post today's section
         id: post
-        if: env.SKIP != 'true'
         continue-on-error: true
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
@@ -61,7 +45,7 @@ jobs:
 
       - name: Retry post on failure
         id: retry
-        if: env.SKIP != 'true' && steps.post.outcome == 'failure'
+        if: steps.post.outcome == 'failure'
         continue-on-error: true
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
@@ -74,7 +58,7 @@ jobs:
           python bot.py
 
       - name: Commit updated state
-        if: env.SKIP != 'true' && (steps.post.outcome == 'success' || steps.retry.outcome == 'success')
+        if: steps.post.outcome == 'success' || steps.retry.outcome == 'success'
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
@@ -84,7 +68,7 @@ jobs:
           git push
 
       - name: Fail if post was unsuccessful
-        if: env.SKIP != 'true' && steps.post.outcome == 'failure' && steps.retry.outcome != 'success'
+        if: steps.post.outcome == 'failure' && steps.retry.outcome != 'success'
         run: |
           echo "❌ Both post attempts failed. Check logs above."
           exit 1
