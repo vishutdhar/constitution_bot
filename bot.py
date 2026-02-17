@@ -323,7 +323,7 @@ def main():
                 chunks = split_text_for_replies(body_text)
                 print(f"   Reply thread will be {len(chunks)} tweet(s)")
                 for i, chunk in enumerate(chunks):
-                    print(f"\n   Reply [{i+1}/{len(chunks)}] ({len(chunk)} chars):")
+                    print(f"\n   Reply {i+1} ({len(chunk)} chars):")
                     print(f"   {chunk}")
         else:
             print("⚠️  No image available — will post text-only")

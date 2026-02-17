@@ -159,13 +159,9 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
 
     Simpler than split_into_thread — no header/hashtag handling.
     Used for the reply thread below an image tweet.
-    Adds [1/N] numbering when multiple chunks are needed.
+    No numbering — Twitter shows reply order visually.
     """
     import re
-
-    # Reserve space for numbering: " [X/XX]" = up to 7 chars
-    overhead = 7
-    usable = max_len - overhead
 
     if len(text) <= max_len:
         return [text]
@@ -177,17 +173,17 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
     for s in raw_sentences:
         clause_parts = re.split(r"(?<=[,;]) ", s)
         for cp in clause_parts:
-            if len(cp) <= usable:
+            if len(cp) <= max_len:
                 fragments.append(cp)
             else:
-                fragments.extend(_split_on_words(cp, usable))
+                fragments.extend(_split_on_words(cp, max_len))
 
     # Pack fragments into tweet-sized chunks
     chunks = []
     current = ""
     for frag in fragments:
         test = f"{current} {frag}".strip() if current else frag
-        if len(test) <= usable:
+        if len(test) <= max_len:
             current = test
         else:
             if current:
@@ -195,11 +191,6 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
             current = frag
     if current:
         chunks.append(current)
-
-    # Add numbering
-    total = len(chunks)
-    if total > 1:
-        chunks = [f"{c} [{i+1}/{total}]" for i, c in enumerate(chunks)]
 
     return chunks
 
