@@ -34,6 +34,7 @@ class BasePlatform(ABC):
         image_path: str | None = None,
         image_text: str | None = None,
         body_text: str | None = None,
+        reply_char_limit: int = 280,
     ) -> dict:
         """
         Publish a post to the platform.
@@ -43,6 +44,7 @@ class BasePlatform(ABC):
             image_path: Optional path to an image file to attach.
             image_text: Optional caption for the image tweet (used as tweet 1).
             body_text: Optional constitutional text posted as reply thread.
+            reply_char_limit: Max chars per reply tweet (280 free, 4000 Premium).
 
         Returns:
             dict with at least {"success": bool, "url": str | None, "error": str | None}

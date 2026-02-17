@@ -37,6 +37,12 @@ IMAGES_DIR = BASE_DIR / "images"
 # ---------------------------------------------------------------------------
 HASHTAGS = "#Constitution #WeThePeople"
 
+# ---------------------------------------------------------------------------
+# Reply character limit — controls when body text gets split across replies.
+# Free tier: 280 | Premium: 4000 (one clean reply, no splits)
+# ---------------------------------------------------------------------------
+REPLY_CHAR_LIMIT = 280
+
 
 # ---------------------------------------------------------------------------
 # State management
@@ -318,18 +324,18 @@ def main():
     if args.preview:
         if image_path:
             print(f"✅ Image post ready — {Path(image_path).name}")
-            if len(body_text) > 280:
+            if len(body_text) > REPLY_CHAR_LIMIT:
                 from platforms.x_twitter import split_text_for_replies
-                chunks = split_text_for_replies(body_text)
+                chunks = split_text_for_replies(body_text, max_len=REPLY_CHAR_LIMIT)
                 print(f"   Reply thread will be {len(chunks)} tweet(s)")
                 for i, chunk in enumerate(chunks):
                     print(f"\n   Reply {i+1} ({len(chunk)} chars):")
                     print(f"   {chunk}")
         else:
             print("⚠️  No image available — will post text-only")
-            if len(fallback_tweet) > 280:
+            if len(fallback_tweet) > REPLY_CHAR_LIMIT:
                 from platforms.x_twitter import split_into_thread
-                chunks = split_into_thread(fallback_tweet)
+                chunks = split_into_thread(fallback_tweet, max_len=REPLY_CHAR_LIMIT)
                 print(f"   Thread will be {len(chunks)} tweet(s)")
         return
 
@@ -353,6 +359,7 @@ def main():
             image_path=image_path,
             image_text=image_text,
             body_text=body_text,
+            reply_char_limit=REPLY_CHAR_LIMIT,
         )
         log_post(entry, result, platform.name)
 

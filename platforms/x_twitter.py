@@ -306,6 +306,7 @@ class XTwitterPlatform(BasePlatform):
         image_path: str | None = None,
         image_text: str | None = None,
         body_text: str | None = None,
+        reply_char_limit: int = 280,
     ) -> dict:
         """
         Post a tweet, optionally with an image and reply thread.
@@ -352,7 +353,7 @@ class XTwitterPlatform(BasePlatform):
 
             # Post body text as reply thread
             if body_text:
-                reply_chunks = split_text_for_replies(body_text)
+                reply_chunks = split_text_for_replies(body_text, max_len=reply_char_limit)
                 previous_id = first_id
 
                 print(f"🧵 Posting reply thread ({len(reply_chunks)} replies)...")
