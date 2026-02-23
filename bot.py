@@ -20,7 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from platforms.x_twitter import XTwitterPlatform
+from platforms.x_twitter import XTwitterPlatform, weighted_len
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -306,16 +306,16 @@ def main():
         print(f"  {'-'*56}")
         print(f"  {image_text}")
         print(f"  + image: {Path(image_path).name}")
-        print(f"  ({len(image_text)} chars)")
+        print(f"  ({weighted_len(image_text)} chars)")
         print(f"\n  💬 REPLY THREAD (Tweet 2+):")
         print(f"  {'-'*56}")
         print(f"  {body_text}")
-        print(f"  ({len(body_text)} chars)")
+        print(f"  ({weighted_len(body_text)} chars)")
     else:
         print(f"\n  📝 TEXT-ONLY (no image found):")
         print(f"  {'-'*56}")
         print(f"  {fallback_tweet}")
-        print(f"  ({len(fallback_tweet)} chars)")
+        print(f"  ({weighted_len(fallback_tweet)} chars)")
 
     print(f"\n{'='*60}\n")
 
@@ -323,16 +323,16 @@ def main():
     if args.preview:
         if image_path:
             print(f"✅ Image post ready — {Path(image_path).name}")
-            if len(body_text) > REPLY_CHAR_LIMIT:
+            if weighted_len(body_text) > REPLY_CHAR_LIMIT:
                 from platforms.x_twitter import split_text_for_replies
                 chunks = split_text_for_replies(body_text, max_len=REPLY_CHAR_LIMIT)
                 print(f"   Reply thread will be {len(chunks)} tweet(s)")
                 for i, chunk in enumerate(chunks):
-                    print(f"\n   Reply {i+1} ({len(chunk)} chars):")
+                    print(f"\n   Reply {i+1} ({weighted_len(chunk)} chars):")
                     print(f"   {chunk}")
         else:
             print("⚠️  No image available — will post text-only")
-            if len(fallback_tweet) > REPLY_CHAR_LIMIT:
+            if weighted_len(fallback_tweet) > REPLY_CHAR_LIMIT:
                 from platforms.x_twitter import split_into_thread
                 chunks = split_into_thread(fallback_tweet, max_len=REPLY_CHAR_LIMIT)
                 print(f"   Thread will be {len(chunks)} tweet(s)")
@@ -349,7 +349,7 @@ def main():
     all_success = True
     for platform in platforms:
         if not platform.validate_length(fallback_tweet):
-            print(f"⚠️  Post too long for {platform.name} ({len(fallback_tweet)} > {platform.max_length})")
+            print(f"⚠️  Post too long for {platform.name} ({weighted_len(fallback_tweet)} > {platform.max_length})")
             all_success = False
             continue
 

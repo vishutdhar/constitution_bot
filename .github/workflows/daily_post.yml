@@ -34,8 +34,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Post today's section
-        id: post
-        continue-on-error: true
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
@@ -43,22 +41,7 @@ jobs:
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: python bot.py
 
-      - name: Retry post on failure
-        id: retry
-        if: steps.post.outcome == 'failure'
-        continue-on-error: true
-        env:
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
-        run: |
-          echo "⏳ First attempt failed. Retrying in 60 seconds..."
-          sleep 60
-          python bot.py
-
       - name: Commit updated state
-        if: steps.post.outcome == 'success' || steps.retry.outcome == 'success'
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
@@ -66,9 +49,3 @@ jobs:
           git diff --cached --quiet || git commit -m "📜 Posted day $(python -c 'import json; print(json.load(open("state.json"))["current_day"] - 1)')"
           git pull --rebase
           git push
-
-      - name: Fail if post was unsuccessful
-        if: steps.post.outcome == 'failure' && steps.retry.outcome != 'success'
-        run: |
-          echo "❌ Both post attempts failed. Check logs above."
-          exit 1

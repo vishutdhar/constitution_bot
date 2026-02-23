@@ -7,7 +7,13 @@ Supports image uploads via the v1.1 API.
 import time
 
 import tweepy
-from platforms.base import BasePlatform, weighted_len
+from platforms.base import BasePlatform
+
+
+def weighted_len(text: str) -> int:
+    """Character length using X's weighted counting rules.
+    Characters above U+FFFF (most emoji) count as 2; everything else counts as 1."""
+    return sum(2 if ord(c) > 0xFFFF else 1 for c in text)
 
 
 def _split_on_words(text: str, max_len: int) -> list[str]:
@@ -225,6 +231,10 @@ class XTwitterPlatform(BasePlatform):
     def max_length(self) -> int:
         # Threading handles overflow, so set generous limit
         return 1400
+
+    def validate_length(self, text: str) -> bool:
+        """X counts emoji as 2 characters; use weighted length."""
+        return weighted_len(text) <= self.max_length
 
     def authenticate(self) -> None:
         """Create authenticated Tweepy v2 client and v1.1 API for media uploads."""
