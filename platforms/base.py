@@ -6,6 +6,12 @@ To add a new platform, create a new file in platforms/ that inherits from this c
 from abc import ABC, abstractmethod
 
 
+def weighted_len(text: str) -> int:
+    """Character length using X's weighted counting rules.
+    Characters above U+FFFF (most emoji) count as 2; everything else counts as 1."""
+    return sum(2 if ord(c) > 0xFFFF else 1 for c in text)
+
+
 class BasePlatform(ABC):
     """Abstract base class for social media platform integrations."""
 
@@ -53,4 +59,4 @@ class BasePlatform(ABC):
 
     def validate_length(self, text: str) -> bool:
         """Check if text fits within the platform's character limit."""
-        return len(text) <= self.max_length
+        return weighted_len(text) <= self.max_length

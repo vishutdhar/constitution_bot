@@ -4,8 +4,10 @@ Automatically threads posts that exceed 280 characters.
 Supports image uploads via the v1.1 API.
 """
 
+import time
+
 import tweepy
-from platforms.base import BasePlatform
+from platforms.base import BasePlatform, weighted_len
 
 
 def _split_on_words(text: str, max_len: int) -> list[str]:
@@ -15,7 +17,7 @@ def _split_on_words(text: str, max_len: int) -> list[str]:
     current = ""
     for word in words:
         test = f"{current} {word}".strip()
-        if len(test) <= max_len:
+        if weighted_len(test) <= max_len:
             current = test
         else:
             if current:
@@ -36,7 +38,7 @@ def _split_on_clauses(text: str, max_len: int) -> list[str]:
     chunks = []
     current = ""
     for clause in clauses:
-        if len(clause) > max_len:
+        if weighted_len(clause) > max_len:
             if current:
                 chunks.append(current)
                 current = ""
@@ -44,7 +46,7 @@ def _split_on_clauses(text: str, max_len: int) -> list[str]:
             continue
 
         test = f"{current} {clause}".strip() if current else clause
-        if len(test) <= max_len:
+        if weighted_len(test) <= max_len:
             current = test
         else:
             if current:
@@ -61,7 +63,7 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     Keeps the header in tweet 1, splits body on sentence boundaries
     (with word-boundary fallback), puts hashtags on the last tweet.
     """
-    if len(text) <= max_len:
+    if weighted_len(text) <= max_len:
         return [text]
 
     # Separate hashtags (last line where all words start with #)
@@ -96,20 +98,20 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     for s in raw_sentences:
         clause_parts = re.split(r"(?<=[,;]) ", s)
         for cp in clause_parts:
-            if len(cp) <= usable:
+            if weighted_len(cp) <= usable:
                 sentences.append(cp)
             else:
                 sentences.extend(_split_on_words(cp, usable))
 
     # Build tweet 1: header + as much body as fits
     tweets = []
-    space = usable - len(header) - 2  # 2 for "\n\n"
+    space = usable - weighted_len(header) - 2  # 2 for "\n\n"
     tweet1_body = ""
     start_idx = 0
 
     for i, s in enumerate(sentences):
         candidate = f"{tweet1_body} {s}".strip() if tweet1_body else s
-        if len(candidate) <= space:
+        if weighted_len(candidate) <= space:
             tweet1_body = candidate
             start_idx = i + 1
         else:
@@ -121,7 +123,7 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     current = ""
     for s in sentences[start_idx:]:
         test = f"{current} {s}".strip() if current else s
-        if len(test) <= usable:
+        if weighted_len(test) <= usable:
             current = test
         else:
             if current:
@@ -132,7 +134,7 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
 
     # Attach hashtags to the last chunk or as a separate tweet
     if remaining and hashtag_line:
-        if len(remaining) + 2 + len(hashtag_line) + overhead <= max_len:
+        if weighted_len(remaining) + 2 + weighted_len(hashtag_line) + overhead <= max_len:
             tweets.append(f"{remaining}\n\n{hashtag_line}")
         else:
             tweets.append(remaining)
@@ -140,7 +142,7 @@ def split_into_thread(text: str, max_len: int = 280) -> list[str]:
     elif remaining:
         tweets.append(remaining)
     elif hashtag_line:
-        if len(tweets[-1]) + 2 + len(hashtag_line) + overhead <= max_len:
+        if weighted_len(tweets[-1]) + 2 + weighted_len(hashtag_line) + overhead <= max_len:
             tweets[-1] += f"\n\n{hashtag_line}"
         else:
             tweets.append(hashtag_line)
@@ -163,7 +165,7 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
     """
     import re
 
-    if len(text) <= max_len:
+    if weighted_len(text) <= max_len:
         return [text]
 
     # Split on sentence boundaries first, then clause boundaries
@@ -173,7 +175,7 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
     for s in raw_sentences:
         clause_parts = re.split(r"(?<=[,;]) ", s)
         for cp in clause_parts:
-            if len(cp) <= max_len:
+            if weighted_len(cp) <= max_len:
                 fragments.append(cp)
             else:
                 fragments.extend(_split_on_words(cp, max_len))
@@ -183,7 +185,7 @@ def split_text_for_replies(text: str, max_len: int = 280) -> list[str]:
     current = ""
     for frag in fragments:
         test = f"{current} {frag}".strip() if current else frag
-        if len(test) <= max_len:
+        if weighted_len(test) <= max_len:
             current = test
         else:
             if current:
@@ -265,23 +267,41 @@ class XTwitterPlatform(BasePlatform):
             print(f"⚠️  Image upload failed: {e}")
             return None
 
+    def _create_tweet_with_retry(self, retries: int = 2, **kwargs) -> tweepy.Response:
+        """
+        Wrapper around create_tweet with per-tweet retry.
+        Retries on transient failures so a partial thread doesn't trigger
+        a full script-level re-run (which would duplicate already-posted tweets).
+        """
+        last_exc = None
+        for attempt in range(1 + retries):
+            try:
+                return self._client.create_tweet(**kwargs)
+            except tweepy.TweepyException as e:
+                last_exc = e
+                if attempt < retries:
+                    wait = 5 * (attempt + 1)
+                    print(f"⚠️  Tweet failed (attempt {attempt + 1}), retrying in {wait}s: {e}")
+                    time.sleep(wait)
+        raise last_exc
+
     def _post_text_only(self, text: str) -> dict:
         """Post using text-only flow (existing behavior). Used as fallback."""
         tweets = split_into_thread(text)
 
         if len(tweets) == 1:
-            response = self._client.create_tweet(text=tweets[0])
+            response = self._create_tweet_with_retry(text=tweets[0])
             tweet_id = response.data["id"]
             url = f"https://x.com/{self._username}/status/{tweet_id}"
             print(f"✅ Posted to X: {url}")
         else:
             print(f"🧵 Posting thread ({len(tweets)} tweets)...")
-            first_response = self._client.create_tweet(text=tweets[0])
+            first_response = self._create_tweet_with_retry(text=tweets[0])
             first_id = first_response.data["id"]
             previous_id = first_id
 
             for tweet_text in tweets[1:]:
-                response = self._client.create_tweet(
+                response = self._create_tweet_with_retry(
                     text=tweet_text,
                     in_reply_to_tweet_id=previous_id,
                 )
@@ -341,7 +361,7 @@ class XTwitterPlatform(BasePlatform):
 
             # Post image tweet
             caption = image_text or text
-            response = self._client.create_tweet(
+            response = self._create_tweet_with_retry(
                 text=caption,
                 media_ids=[media_id],
             )
@@ -358,7 +378,7 @@ class XTwitterPlatform(BasePlatform):
 
                 print(f"🧵 Posting reply thread ({len(reply_chunks)} replies)...")
                 for chunk in reply_chunks:
-                    response = self._client.create_tweet(
+                    response = self._create_tweet_with_retry(
                         text=chunk,
                         in_reply_to_tweet_id=previous_id,
                     )

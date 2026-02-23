@@ -280,7 +280,6 @@ def main():
     if day_num > total_days:
         day_num = 1
         state["current_day"] = 1
-        save_state(state)
         print(f"🔄 Completed all {total_days} days. Looping back to Day 1.")
 
     # Find the post entry
