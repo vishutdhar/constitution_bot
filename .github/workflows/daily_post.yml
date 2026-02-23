@@ -1,12 +1,12 @@
-# Post one section of the U.S. Constitution daily at ~4 AM ET.
-# 09:00 UTC = 4 AM EST (winter) / 5 AM EDT (summer).
+# Post one section of the U.S. Constitution daily during peak engagement.
+# 13:00 UTC = 9 AM EDT (summer) / 8 AM EST (winter).
 # State is persisted via git commit back to the repo.
 
 name: Daily Constitution Post
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "0 13 * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 # Prevent overlapping runs (e.g., manual trigger during scheduled run)
