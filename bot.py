@@ -41,7 +41,7 @@ HASHTAGS = "#Constitution #WeThePeople"
 # Reply character limit — controls when body text gets split across replies.
 # Free tier: 280 | Premium: 4000 (one clean reply, no splits)
 # ---------------------------------------------------------------------------
-REPLY_CHAR_LIMIT = 280
+REPLY_CHAR_LIMIT = 4000
 
 
 # ---------------------------------------------------------------------------
