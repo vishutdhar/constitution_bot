@@ -33,9 +33,9 @@ IMAGE_MAPPING_FILE = BASE_DIR / "image_mapping.json"
 IMAGES_DIR = BASE_DIR / "images"
 
 # ---------------------------------------------------------------------------
-# Hashtags appended to every post (customize as you like)
+# Fallback hashtags — used only if an entry has no "hashtags" field
 # ---------------------------------------------------------------------------
-HASHTAGS = "#Constitution #WeThePeople"
+HASHTAGS = "#USConstitution #Constitution"
 
 # ---------------------------------------------------------------------------
 # Reply character limit — controls when body text gets split across replies.
@@ -85,11 +85,12 @@ def format_post(entry: dict, total_days: int) -> str:
 
         {Text}
 
-        #Constitution #WeThePeople
+        #USConstitution #SectionSpecific #Community
     """
     header = f"📜 Day {entry['day']}/{total_days} — {entry['section']}"
     body = entry["text"]
-    tweet = f"{header}\n\n{body}\n\n{HASHTAGS}"
+    hashtags = entry.get("hashtags", HASHTAGS)
+    tweet = f"{header}\n\n{body}\n\n{hashtags}"
     return tweet
 
 
@@ -101,9 +102,10 @@ def format_image_text(entry: dict) -> str:
     Template:
         📜 {Section}
 
-        #Constitution #WeThePeople
+        #USConstitution #SectionSpecific #Community
     """
-    return f"📜 {entry['section']}\n\n{HASHTAGS}"
+    hashtags = entry.get("hashtags", HASHTAGS)
+    return f"📜 {entry['section']}\n\n{hashtags}"
 
 
 # ---------------------------------------------------------------------------
