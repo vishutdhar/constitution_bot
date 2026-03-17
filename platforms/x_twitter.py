@@ -295,9 +295,9 @@ class XTwitterPlatform(BasePlatform):
                     time.sleep(wait)
         raise last_exc
 
-    def _post_text_only(self, text: str) -> dict:
+    def _post_text_only(self, text: str, max_len: int = 280) -> dict:
         """Post using text-only flow (existing behavior). Used as fallback."""
-        tweets = split_into_thread(text)
+        tweets = split_into_thread(text, max_len=max_len)
 
         if len(tweets) == 1:
             response = self._create_tweet_with_retry(text=tweets[0])
@@ -359,7 +359,7 @@ class XTwitterPlatform(BasePlatform):
         try:
             # --- Text-only mode (no image provided) ---
             if not image_path:
-                return self._post_text_only(text)
+                return self._post_text_only(text, max_len=reply_char_limit)
 
             # --- Image mode ---
             media_id = self._upload_image(image_path)
@@ -367,7 +367,7 @@ class XTwitterPlatform(BasePlatform):
             if media_id is None:
                 # Fallback: image upload failed, post text-only
                 print("⚠️  Falling back to text-only post")
-                return self._post_text_only(text)
+                return self._post_text_only(text, max_len=reply_char_limit)
 
             # Post image tweet
             caption = image_text or text
