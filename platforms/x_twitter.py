@@ -16,6 +16,38 @@ def weighted_len(text: str) -> int:
     return sum(2 if ord(c) > 0xFFFF else 1 for c in text)
 
 
+def _format_error_detail(e: Exception) -> str:
+    """
+    Build a diagnostic string from a tweepy exception.
+
+    str(e) alone often returns only "403 Forbidden" when the response body
+    is empty or non-JSON (edge-level blocks, quota gates). This surfaces the
+    HTTP status, response body snippet, and any X API error codes/messages
+    so the real cause is visible in logs.
+    """
+    parts = [f"{type(e).__name__}: {e}"]
+
+    response = getattr(e, "response", None)
+    if response is not None:
+        status = getattr(response, "status_code", None)
+        if status is not None:
+            parts.append(f"status={status}")
+        body = getattr(response, "text", "") or ""
+        if body:
+            snippet = body[:500] + ("...[truncated]" if len(body) > 500 else "")
+            parts.append(f"body={snippet!r}")
+
+    api_codes = getattr(e, "api_codes", None)
+    if api_codes:
+        parts.append(f"api_codes={api_codes}")
+
+    api_messages = getattr(e, "api_messages", None)
+    if api_messages:
+        parts.append(f"api_messages={api_messages}")
+
+    return " | ".join(parts)
+
+
 def _split_on_words(text: str, max_len: int) -> list[str]:
     """Split text on word boundaries to fit within max_len."""
     chunks = []
@@ -274,7 +306,7 @@ class XTwitterPlatform(BasePlatform):
             print(f"✅ Image uploaded (media_id: {media_id})")
             return media_id
         except tweepy.TweepyException as e:
-            print(f"⚠️  Image upload failed: {e}")
+            print(f"⚠️  Image upload failed: {_format_error_detail(e)}")
             return None
 
     def _create_tweet_with_retry(self, retries: int = 2, **kwargs) -> tweepy.Response:
@@ -291,7 +323,7 @@ class XTwitterPlatform(BasePlatform):
                 last_exc = e
                 if attempt < retries:
                     wait = 5 * (attempt + 1)
-                    print(f"⚠️  Tweet failed (attempt {attempt + 1}), retrying in {wait}s: {e}")
+                    print(f"⚠️  Tweet failed (attempt {attempt + 1}), retrying in {wait}s: {_format_error_detail(e)}")
                     time.sleep(wait)
         raise last_exc
 
@@ -406,11 +438,12 @@ class XTwitterPlatform(BasePlatform):
             }
 
         except tweepy.TweepyException as e:
-            print(f"❌ X post failed: {e}")
+            detail = _format_error_detail(e)
+            print(f"❌ X post failed: {detail}")
             return {
                 "success": False,
                 "url": None,
                 "tweet_id": None,
                 "thread_length": 0,
-                "error": str(e),
+                "error": detail,
             }
