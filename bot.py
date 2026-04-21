@@ -67,6 +67,37 @@ def reset_state() -> None:
     print("🔄 State reset to day 1.")
 
 
+def already_posted_today() -> bool:
+    """
+    Return True if any successful post is already logged for today's UTC date.
+
+    Used to make the cron idempotent: with multiple daily cron windows, only
+    the first successful run posts; later runs exit cleanly.
+    """
+    if not LOG_FILE.exists():
+        return False
+    try:
+        with open(LOG_FILE) as f:
+            log = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return False
+
+    today_utc = datetime.now(timezone.utc).date()
+    for entry in log:
+        if not entry.get("success"):
+            continue
+        ts = entry.get("timestamp")
+        if not ts:
+            continue
+        try:
+            entry_date = datetime.fromisoformat(ts).date()
+        except (TypeError, ValueError):
+            continue
+        if entry_date == today_utc:
+            return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Post loading & formatting
 # ---------------------------------------------------------------------------
@@ -263,6 +294,13 @@ def main():
 
     if args.reset:
         reset_state()
+        return
+
+    # Idempotency: skip if today's post already succeeded.
+    # Exceptions: --preview (informational), --day N (manual override), --validate (meta).
+    if not args.day and not args.preview and not args.validate and already_posted_today():
+        today = datetime.now(timezone.utc).date().isoformat()
+        print(f"✅ Already posted today ({today}) — skipping.")
         return
 
     # Load data
