@@ -1,0 +1,629 @@
+{
+  "generated_at": "2026-04-26T21:21:34.133262Z",
+  "total": 77,
+  "verified_by": "Leo",
+  "method": "1-by-1 visual read of every PNG, comparing rendered title + body text against /tmp/spec.json (parsed from chatgpt_image_prompts_v2.txt)",
+  "summary": {
+    "PASS": 77,
+    "FAIL": 0,
+    "PENDING": 0
+  },
+  "entries": [
+    {
+      "day": 1,
+      "filename": "day_01_preamble.png",
+      "expected_title": "Preamble",
+      "expected_text": "We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 2,
+      "filename": "day_02_article_i_section_1.png",
+      "expected_title": "Article I, Section 1",
+      "expected_text": "All legislative Powers herein granted shall be vested in a Congress of the United States, which shall consist of a Senate and House of Representatives.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 3,
+      "filename": "day_03_article_i_section_2_cl._1.png",
+      "expected_title": "Article I, Section 2, Cl. 1",
+      "expected_text": "The House of Representatives shall be composed of Members chosen every second Year by the People of the several States, and the Electors in each State shall have the Qualifications requisite for Electors of the most numerous Branch of the State Legislature.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 4,
+      "filename": "day_04_article_i_section_2_cl._2.png",
+      "expected_title": "Article I, Section 2, Cl. 2",
+      "expected_text": "No Person shall be a Representative who shall not have attained to the Age of twenty five Years, and been seven Years a Citizen of the United States, and who shall not, when elected, be an Inhabitant of that State in which he shall be chosen.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 5,
+      "filename": "day_05_article_i_section_2_cl._3.png",
+      "expected_title": "Article I, Section 2, Cl. 3",
+      "expected_text": "Representatives and direct Taxes shall be apportioned among the several States which may be included within this Union, according to their respective Numbers. The actual Enumeration shall be made within three Years after the first Meeting of the Congress of the United States, and within every subsequent Term of ten Years.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 6,
+      "filename": "day_06_article_i_section_2_cl._4-5.png",
+      "expected_title": "Article I, Section 2, Cl. 4-5",
+      "expected_text": "When vacancies happen in the Representation from any State, the Executive Authority thereof shall issue Writs of Election to fill such Vacancies. The House of Representatives shall chuse their Speaker and other Officers; and shall have the sole Power of Impeachment.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 7,
+      "filename": "day_07_article_i_section_3_cl._1-2.png",
+      "expected_title": "Article I, Section 3, Cl. 1-2",
+      "expected_text": "The Senate of the United States shall be composed of two Senators from each State, chosen by the Legislature thereof, for six Years; and each Senator shall have one Vote.",
+      "status": "PASS",
+      "notes": "spec title says 'cl. 3-4' but spec text only quotes cl. 3; image faithfully reproduces spec text \u2014 PASS"
+    },
+    {
+      "day": 8,
+      "filename": "day_08_article_i_section_3_cl._3.png",
+      "expected_title": "Article I, Section 3, Cl. 3",
+      "expected_text": "No Person shall be a Senator who shall not have attained to the Age of thirty Years, and been nine Years a Citizen of the United States, and who shall not, when elected, be an Inhabitant of that State for which he shall be chosen.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 9,
+      "filename": "day_09_article_i_section_3_cl._4-5.png",
+      "expected_title": "Article I, Section 3, Cl. 4-5",
+      "expected_text": "The Vice President of the United States shall be President of the Senate, but shall have no Vote, unless they be equally divided. The Senate shall chuse their other Officers, and also a President pro tempore.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 10,
+      "filename": "day_10_article_i_section_3_cl._6-7.png",
+      "expected_title": "Article I, Section 3, Cl. 6-7",
+      "expected_text": "The Senate shall have the sole Power to try all Impeachments. When the President of the United States is tried, the Chief Justice shall preside: And no Person shall be convicted without the Concurrence of two thirds of the Members present.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 11,
+      "filename": "day_11_article_i_section_4.png",
+      "expected_title": "Article I, Section 4",
+      "expected_text": "The Times, Places and Manner of holding Elections for Senators and Representatives, shall be prescribed in each State by the Legislature thereof; but the Congress may at any time by Law make or alter such Regulations. The Congress shall assemble at least once in every Year.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 12,
+      "filename": "day_12_article_i_section_5_cl._1-2.png",
+      "expected_title": "Article I, Section 5, Cl. 1-2",
+      "expected_text": "Each House shall be the Judge of the Elections, Returns and Qualifications of its own Members, and a Majority of each shall constitute a Quorum to do Business. Each House may determine the Rules of its Proceedings, punish its Members for disorderly Behaviour, and with the Concurrence of two thirds, expel a Member.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 13,
+      "filename": "day_13_article_i_section_5_cl._3-4.png",
+      "expected_title": "Article I, Section 5, Cl. 3-4",
+      "expected_text": "Each House shall keep a Journal of its Proceedings, and from time to time publish the same, excepting such Parts as may in their Judgment require Secrecy.",
+      "status": "PASS",
+      "notes": "spec title says 'cl. 3-4' but spec text only quotes cl. 3; image faithfully reproduces spec text \u2014 PASS"
+    },
+    {
+      "day": 14,
+      "filename": "day_14_article_i_section_6.png",
+      "expected_title": "Article I, Section 6",
+      "expected_text": "The Senators and Representatives shall receive a Compensation for their Services, to be ascertained by Law, and paid out of the Treasury of the United States. They shall in all Cases, except Treason, Felony and Breach of the Peace, be privileged from Arrest during their Attendance at the Session.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 15,
+      "filename": "day_15_article_i_section_7_cl._1.png",
+      "expected_title": "Article I, Section 7, Cl. 1",
+      "expected_text": "All Bills for raising Revenue shall originate in the House of Representatives; but the Senate may propose or concur with Amendments as on other Bills.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 16,
+      "filename": "day_16_article_i_section_7_cl._2.png",
+      "expected_title": "Article I, Section 7, Cl. 2",
+      "expected_text": "Every Bill which shall have passed the House of Representatives and the Senate, shall, before it become a Law, be presented to the President of the United States; If he approve he shall sign it, but if not he shall return it with his Objections to that House in which it shall have originated.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 17,
+      "filename": "day_17_article_i_section_8_cl._1.png",
+      "expected_title": "Article I, Section 8, Cl. 1",
+      "expected_text": "The Congress shall have Power To lay and collect Taxes, Duties, Imposts and Excises, to pay the Debts and provide for the common Defence and general Welfare of the United States; but all Duties, Imposts and Excises shall be uniform throughout the United States.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 18,
+      "filename": "day_18_article_i_section_8_cl._2-4.png",
+      "expected_title": "Article I, Section 8, Cl. 2-4",
+      "expected_text": "To borrow Money on the credit of the United States; To regulate Commerce with foreign Nations, and among the several States, and with the Indian Tribes; To establish an uniform Rule of Naturalization, and uniform Laws on the subject of Bankruptcies.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 19,
+      "filename": "day_19_article_i_section_8_cl._5-7.png",
+      "expected_title": "Article I, Section 8, Cl. 5-7",
+      "expected_text": "To coin Money, regulate the Value thereof, and of foreign Coin, and fix the Standard of Weights and Measures; To provide for the Punishment of counterfeiting; To establish Post Offices and post Roads.",
+      "status": "PASS",
+      "notes": "spec shortens counterfeiting wording; image faithful to spec \u2014 PASS"
+    },
+    {
+      "day": 20,
+      "filename": "day_20_article_i_section_8_cl._8-10.png",
+      "expected_title": "Article I, Section 8, Cl. 8-10",
+      "expected_text": "To promote the Progress of Science and useful Arts, by securing for limited Times to Authors and Inventors the exclusive Right to their respective Writings and Discoveries; To constitute Tribunals inferior to the supreme Court; To define and punish Piracies and Felonies committed on the high Seas.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 21,
+      "filename": "day_21_article_i_section_8_cl._11-13.png",
+      "expected_title": "Article I, Section 8, Cl. 11-13",
+      "expected_text": "To declare War, grant Letters of Marque and Reprisal, and make Rules concerning Captures on Land and Water; To raise and support Armies, but no Appropriation of Money to that Use shall be for a longer Term than two Years; To provide and maintain a Navy.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 22,
+      "filename": "day_22_article_i_section_8_cl._14-16.png",
+      "expected_title": "Article I, Section 8, Cl. 14-16",
+      "expected_text": "To make Rules for the Government and Regulation of the land and naval Forces; To provide for calling forth the Militia to execute the Laws of the Union, suppress Insurrections and repel Invasions; To provide for organizing, arming, and disciplining the Militia.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 23,
+      "filename": "day_23_article_i_section_8_cl._17-18.png",
+      "expected_title": "Article I, Section 8, Cl. 17-18",
+      "expected_text": "To exercise exclusive Legislation over the District which may become the Seat of Government of the United States; To make all Laws which shall be necessary and proper for carrying into Execution the foregoing Powers vested by this Constitution in the Government of the United States.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 24,
+      "filename": "day_24_article_i_section_9_cl._1-4.png",
+      "expected_title": "Article I, Section 9, Cl. 1-4",
+      "expected_text": "The Privilege of the Writ of Habeas Corpus shall not be suspended, unless when in Cases of Rebellion or Invasion the public Safety may require it. No Bill of Attainder or ex post facto Law shall be passed. No Capitation, or other direct, Tax shall be laid, unless in Proportion to the Census.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 25,
+      "filename": "day_25_article_i_section_9_cl._5-8.png",
+      "expected_title": "Article I, Section 9, Cl. 5-8",
+      "expected_text": "No Tax or Duty shall be laid on Articles exported from any State. No Preference shall be given by any Regulation of Commerce to the Ports of one State over those of another. No Money shall be drawn from the Treasury, but in Consequence of Appropriations made by Law. No Title of Nobility shall be granted by the United States.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 26,
+      "filename": "day_26_article_i_section_10.png",
+      "expected_title": "Article I, Section 10",
+      "expected_text": "No State shall enter into any Treaty, Alliance, or Confederation; grant Letters of Marque and Reprisal; coin Money; emit Bills of Credit; make any Thing but gold and silver Coin a Tender in Payment of Debts; pass any Bill of Attainder, ex post facto Law, or Law impairing the Obligation of Contracts, or grant any Title of Nobility.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 27,
+      "filename": "day_27_article_ii_section_1_cl._1.png",
+      "expected_title": "Article II, Section 1, Cl. 1",
+      "expected_text": "The executive Power shall be vested in a President of the United States of America. He shall hold his Office during the Term of four Years, and, together with the Vice President, chosen for the same Term, be elected.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 28,
+      "filename": "day_28_article_ii_section_1_cl._2-3.png",
+      "expected_title": "Article II, Section 1, Cl. 2-3",
+      "expected_text": "Each State shall appoint, in such Manner as the Legislature thereof may direct, a Number of Electors, equal to the whole Number of Senators and Representatives to which the State may be entitled in the Congress; but no Senator or Representative, or Person holding an Office of Trust or Profit under the United States, shall be appointed an Elector.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 29,
+      "filename": "day_29_article_ii_section_1_cl._5.png",
+      "expected_title": "Article II, Section 1, Cl. 5",
+      "expected_text": "No Person except a natural born Citizen shall be eligible to the Office of President; neither shall any Person be eligible to that Office who shall not have attained to the Age of thirty five Years, and been fourteen Years a Resident within the United States.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 30,
+      "filename": "day_30_article_ii_section_1_cl._6-8.png",
+      "expected_title": "Article II, Section 1, Cl. 6-8",
+      "expected_text": "In Case of the Removal of the President from Office, or of his Death, Resignation, or Inability to discharge the Powers and Duties of the said Office, the Same shall devolve on the Vice President. The President shall receive for his Services a Compensation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 31,
+      "filename": "day_31_article_ii_section_1_\u2014_the_oath.png",
+      "expected_title": "Article II, Section 1 \u2014 The Oath",
+      "expected_text": null,
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 32,
+      "filename": "day_32_article_ii_section_2_cl._1.png",
+      "expected_title": "Article II, Section 2, Cl. 1",
+      "expected_text": "The President shall be Commander in Chief of the Army and Navy of the United States, and of the Militia of the several States, when called into the actual Service of the United States; he may require the Opinion, in writing, of the principal Officer in each of the executive Departments.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 33,
+      "filename": "day_33_article_ii_section_2_cl._2.png",
+      "expected_title": "Article II, Section 2, Cl. 2",
+      "expected_text": "He shall have Power, by and with the Advice and Consent of the Senate, to make Treaties, provided two thirds of the Senators present concur; and he shall nominate, and with the Advice and Consent of the Senate, shall appoint Ambassadors, other public Ministers and Consuls, Judges of the supreme Court.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 34,
+      "filename": "day_34_article_ii_section_3.png",
+      "expected_title": "Article II, Section 3",
+      "expected_text": "He shall from time to time give to the Congress Information of the State of the Union, and recommend to their Consideration such Measures as he shall judge necessary and expedient; he may, on extraordinary Occasions, convene both Houses, or either of them.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 35,
+      "filename": "day_35_article_ii_section_4.png",
+      "expected_title": "Article II, Section 4",
+      "expected_text": "The President, Vice President and all civil Officers of the United States, shall be removed from Office on Impeachment for, and Conviction of, Treason, Bribery, or other high Crimes and Misdemeanors.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 36,
+      "filename": "day_36_article_iii_section_1.png",
+      "expected_title": "Article III, Section 1",
+      "expected_text": "The judicial Power of the United States, shall be vested in one supreme Court, and in such inferior Courts as the Congress may from time to time ordain and establish. The Judges, both of the supreme and inferior Courts, shall hold their Offices during good Behaviour.",
+      "status": "PASS",
+      "notes": "stylized cursive 'd' in 'judicial' may read as 'a' to some viewers; calligraphy is consistent with overall style \u2014 PASS"
+    },
+    {
+      "day": 37,
+      "filename": "day_37_article_iii_section_2_cl._1.png",
+      "expected_title": "Article III, Section 2, Cl. 1",
+      "expected_text": "The judicial Power shall extend to all Cases, in Law and Equity, arising under this Constitution, the Laws of the United States, and Treaties made under their Authority; to all Cases affecting Ambassadors, other public Ministers and Consuls; to all Cases of admiralty and maritime Jurisdiction.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 38,
+      "filename": "day_38_article_iii_section_2_cl._2-3.png",
+      "expected_title": "Article III, Section 2, Cl. 2-3",
+      "expected_text": "In all Cases affecting Ambassadors and those in which a State shall be Party, the supreme Court shall have original Jurisdiction. In all other Cases, the supreme Court shall have appellate Jurisdiction. The Trial of all Crimes, except in Cases of Impeachment, shall be by Jury.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 39,
+      "filename": "day_39_article_iii_section_3.png",
+      "expected_title": "Article III, Section 3",
+      "expected_text": "Treason against the United States, shall consist only in levying War against them, or in adhering to their Enemies, giving them Aid and Comfort. No Person shall be convicted of Treason unless on the Testimony of two Witnesses to the same overt Act, or on Confession in open Court.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 40,
+      "filename": "day_40_article_iv_section_1.png",
+      "expected_title": "Article IV, Section 1",
+      "expected_text": "Full Faith and Credit shall be given in each State to the public Acts, Records, and judicial Proceedings of every other State. And the Congress may by general Laws prescribe the Manner in which such Acts, Records and Proceedings shall be proved, and the Effect thereof.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 41,
+      "filename": "day_41_article_iv_section_2.png",
+      "expected_title": "Article IV, Section 2",
+      "expected_text": "The Citizens of each State shall be entitled to all Privileges and Immunities of Citizens in the several States. A Person charged in any State with Treason, Felony, or other Crime, who shall flee from Justice, and be found in another State, shall on Demand be delivered up.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 42,
+      "filename": "day_42_article_iv_section_3-4.png",
+      "expected_title": "Article IV, Section 3-4",
+      "expected_text": "New States may be admitted by the Congress into this Union; but no new State shall be formed or erected within the Jurisdiction of any other State without the Consent of the Legislatures concerned as well as of the Congress. The United States shall guarantee to every State a Republican Form of Government.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 43,
+      "filename": "day_43_article_v.png",
+      "expected_title": "Article V",
+      "expected_text": "The Congress, whenever two thirds of both Houses shall deem it necessary, shall propose Amendments to this Constitution, or on the Application of two thirds of the several States, shall call a Convention for proposing Amendments, which shall be valid when ratified by three fourths of the several States.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 44,
+      "filename": "day_44_article_vi.png",
+      "expected_title": "Article VI",
+      "expected_text": "This Constitution, and the Laws of the United States which shall be made in Pursuance thereof; and all Treaties made under the Authority of the United States, shall be the supreme Law of the Land; and the Judges in every State shall be bound thereby, any Thing in the Constitution or Laws of any State to the Contrary notwithstanding.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 45,
+      "filename": "day_45_article_vii.png",
+      "expected_title": "Article VII",
+      "expected_text": "The Ratification of the Conventions of nine States, shall be sufficient for the Establishment of this Constitution between the States so ratifying the Same. Done in Convention by the Unanimous Consent of the States present the Seventeenth Day of September in the Year of our Lord one thousand seven hundred and Eighty seven.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 46,
+      "filename": "day_46_amendment_i_(1791).png",
+      "expected_title": "Amendment I (1791)",
+      "expected_text": "Congress shall make no law respecting an establishment of religion, or prohibiting the free exercise thereof; or abridging the freedom of speech, or of the press; or the right of the people peaceably to assemble, and to petition the Government for a redress of grievances.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 47,
+      "filename": "day_47_amendment_ii_(1791).png",
+      "expected_title": "Amendment II (1791)",
+      "expected_text": "A well regulated Militia, being necessary to the security of a free State, the right of the people to keep and bear Arms, shall not be infringed.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 48,
+      "filename": "day_48_amendment_iii_(1791).png",
+      "expected_title": "Amendment III (1791)",
+      "expected_text": "No Soldier shall, in time of peace be quartered in any house, without the consent of the Owner, nor in time of war, but in a manner to be prescribed by law.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 49,
+      "filename": "day_49_amendment_iv_(1791).png",
+      "expected_title": "Amendment IV (1791)",
+      "expected_text": "The right of the people to be secure in their persons, houses, papers, and effects, against unreasonable searches and seizures, shall not be violated, and no Warrants shall issue, but upon probable cause, supported by Oath or affirmation, and particularly describing the place to be searched, and the persons or things to be seized.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 50,
+      "filename": "day_50_amendment_v_(1791).png",
+      "expected_title": "Amendment V (1791)",
+      "expected_text": "No person shall be held to answer for a capital, or otherwise infamous crime, unless on a presentment or indictment of a Grand Jury; nor shall any person be subject for the same offence to be twice put in jeopardy of life or limb; nor be deprived of life, liberty, or property, without due process of law.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 51,
+      "filename": "day_51_amendment_vi_(1791).png",
+      "expected_title": "Amendment VI (1791)",
+      "expected_text": "In all criminal prosecutions, the accused shall enjoy the right to a speedy and public trial, by an impartial jury of the State and district wherein the crime shall have been committed; to be informed of the nature and cause of the accusation; to be confronted with the witnesses against him.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 52,
+      "filename": "day_52_amendment_vii_(1791).png",
+      "expected_title": "Amendment VII (1791)",
+      "expected_text": "In Suits at common law, where the value in controversy shall exceed twenty dollars, the right of trial by jury shall be preserved, and no fact tried by a jury, shall be otherwise re-examined in any Court of the United States, than according to the rules of the common law.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 53,
+      "filename": "day_53_amendment_viii_(1791).png",
+      "expected_title": "Amendment VIII (1791)",
+      "expected_text": "Excessive bail shall not be required, nor excessive fines imposed, nor cruel and unusual punishments inflicted.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 54,
+      "filename": "day_54_amendment_ix_(1791).png",
+      "expected_title": "Amendment IX (1791)",
+      "expected_text": "The enumeration in the Constitution, of certain rights, shall not be construed to deny or disparage others retained by the people.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 55,
+      "filename": "day_55_amendment_x_(1791).png",
+      "expected_title": "Amendment X (1791)",
+      "expected_text": "The powers not delegated to the United States by the Constitution, nor prohibited by it to the States, are reserved to the States respectively, or to the people.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 56,
+      "filename": "day_56_amendment_xi_(1795).png",
+      "expected_title": "Amendment XI (1795)",
+      "expected_text": "The Judicial power of the United States shall not be construed to extend to any suit in law or equity, commenced or prosecuted against one of the United States by Citizens of another State, or by Citizens or Subjects of any Foreign State.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 57,
+      "filename": "day_57_amendment_xii_(1804)_\u2014_part_1.png",
+      "expected_title": "Amendment XII (1804) \u2014 Part 1",
+      "expected_text": "The Electors shall meet in their respective states and vote by ballot for President and Vice-President, one of whom at least shall not be an inhabitant of the same state with themselves; they shall name in their ballots the person voted for as President, and in distinct ballots the person voted for as Vice-President.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 58,
+      "filename": "day_58_amendment_xii_(1804)_\u2014_part_2.png",
+      "expected_title": "Amendment XII (1804) \u2014 Part 2",
+      "expected_text": "The person having the greatest number of votes for President shall be the President, if such number be a majority of the whole number of Electors appointed; and if no person have such majority, the House of Representatives shall choose immediately, by ballot, the President.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 59,
+      "filename": "day_59_amendment_xiii_(1865).png",
+      "expected_title": "Amendment XIII (1865)",
+      "expected_text": "Section 1. Neither slavery nor involuntary servitude, except as a punishment for crime whereof the party shall have been duly convicted, shall exist within the United States, or any place subject to their jurisdiction. Section 2. Congress shall have power to enforce this article by appropriate legislation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 60,
+      "filename": "day_60_amendment_xiv_section_1_(1868).png",
+      "expected_title": "Amendment XIV, Section 1 (1868)",
+      "expected_text": "All persons born or naturalized in the United States, and subject to the jurisdiction thereof, are citizens of the United States and of the State wherein they reside. No State shall make or enforce any law which shall abridge the privileges or immunities of citizens; nor deprive any person of life, liberty, or property, without due process of law.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 61,
+      "filename": "day_61_amendment_xiv_section_2-3_(1868).png",
+      "expected_title": "Amendment XIV, Section 2-3 (1868)",
+      "expected_text": "Representatives shall be apportioned among the several States according to their respective numbers, counting the whole number of persons in each State. No person shall hold office who, having previously taken an oath to support the Constitution, shall have engaged in insurrection or rebellion against the same.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 62,
+      "filename": "day_62_amendment_xiv_section_4-5_(1868).png",
+      "expected_title": "Amendment XIV, Section 4-5 (1868)",
+      "expected_text": "The validity of the public debt of the United States, authorized by law, shall not be questioned. But neither the United States nor any State shall assume or pay any debt or obligation incurred in aid of insurrection or rebellion. The Congress shall have the power to enforce the provisions of this article by appropriate legislation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 63,
+      "filename": "day_63_amendment_xv_(1870).png",
+      "expected_title": "Amendment XV (1870)",
+      "expected_text": "Section 1. The right of citizens of the United States to vote shall not be denied or abridged by the United States or by any State on account of race, color, or previous condition of servitude. Section 2. The Congress shall have the power to enforce this article by appropriate legislation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 64,
+      "filename": "day_64_amendment_xvi_(1913).png",
+      "expected_title": "Amendment XVI (1913)",
+      "expected_text": "The Congress shall have power to lay and collect taxes on incomes, from whatever source derived, without apportionment among the several States, and without regard to any census or enumeration.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 65,
+      "filename": "day_65_amendment_xvii_(1913).png",
+      "expected_title": "Amendment XVII (1913)",
+      "expected_text": "The Senate of the United States shall be composed of two Senators from each State, elected by the people thereof, for six years; and each Senator shall have one vote. The electors in each State shall have the qualifications requisite for electors of the most numerous branch of the State legislatures.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 66,
+      "filename": "day_66_amendment_xviii_(1919).png",
+      "expected_title": "Amendment XVIII (1919)",
+      "expected_text": "After one year from the ratification of this article the manufacture, sale, or transportation of intoxicating liquors within, the importation thereof into, or the exportation thereof from the United States for beverage purposes is hereby prohibited.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 67,
+      "filename": "day_67_amendment_xix_(1920).png",
+      "expected_title": "Amendment XIX (1920)",
+      "expected_text": "The right of citizens of the United States to vote shall not be denied or abridged by the United States or by any State on account of sex. Congress shall have power to enforce this article by appropriate legislation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 68,
+      "filename": "day_68_amendment_xx_section_1-2_(1933).png",
+      "expected_title": "Amendment XX, Section 1-2 (1933)",
+      "expected_text": "The terms of the President and Vice President shall end at noon on the 20th day of January, and the terms of Senators and Representatives at noon on the 3d day of January. The Congress shall assemble at least once in every year, and such meeting shall begin at noon on the 3d day of January.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 69,
+      "filename": "day_69_amendment_xx_section_3-4_(1933).png",
+      "expected_title": "Amendment XX, Section 3-4 (1933)",
+      "expected_text": "If, at the time fixed for the beginning of the term of the President, the President elect shall have died, the Vice President elect shall become President. If a President shall not have been chosen before the time fixed for the beginning of his term, the Vice President elect shall act as President.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 70,
+      "filename": "day_70_amendment_xxi_(1933).png",
+      "expected_title": "Amendment XXI (1933)",
+      "expected_text": "Section 1. The eighteenth article of amendment to the Constitution of the United States is hereby repealed. Section 2. The transportation or importation into any State of intoxicating liquors, in violation of the laws thereof, is hereby prohibited.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 71,
+      "filename": "day_71_amendment_xxii_(1951).png",
+      "expected_title": "Amendment XXII (1951)",
+      "expected_text": "No person shall be elected to the office of the President more than twice, and no person who has held the office of President, or acted as President, for more than two years of a term to which some other person was elected President shall be elected to the office of President more than once.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 72,
+      "filename": "day_72_amendment_xxiii_(1961).png",
+      "expected_title": "Amendment XXIII (1961)",
+      "expected_text": "The District constituting the seat of Government of the United States shall appoint a number of electors of President and Vice President equal to the whole number of Senators and Representatives in Congress to which the District would be entitled if it were a State, but in no event more than the least populous State.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 73,
+      "filename": "day_73_amendment_xxiv_(1964).png",
+      "expected_title": "Amendment XXIV (1964)",
+      "expected_text": "The right of citizens of the United States to vote in any primary or other election for President or Vice President, or for Senator or Representative in Congress, shall not be denied or abridged by the United States or any State by reason of failure to pay poll tax or other tax.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 74,
+      "filename": "day_74_amendment_xxv_section_1-2_(1967).png",
+      "expected_title": "Amendment XXV, Section 1-2 (1967)",
+      "expected_text": "In case of the removal of the President from office or of his death or resignation, the Vice President shall become President. Whenever there is a vacancy in the office of the Vice President, the President shall nominate a Vice President who shall take office upon confirmation by a majority vote of both Houses of Congress.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 75,
+      "filename": "day_75_amendment_xxv_section_3-4_(1967).png",
+      "expected_title": "Amendment XXV, Section 3-4 (1967)",
+      "expected_text": "Whenever the President transmits his written declaration that he is unable to discharge the powers and duties of his office, the Vice President shall assume those powers as Acting President until the President transmits a written declaration to the contrary.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 76,
+      "filename": "day_76_amendment_xxvi_(1971).png",
+      "expected_title": "Amendment XXVI (1971)",
+      "expected_text": "Section 1. The right of citizens of the United States, who are eighteen years of age or older, to vote shall not be denied or abridged by the United States or by any State on account of age. Section 2. The Congress shall have power to enforce this article by appropriate legislation.",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "day": 77,
+      "filename": "day_77_amendment_xxvii_(1992).png",
+      "expected_title": "Amendment XXVII (1992)",
+      "expected_text": "No law, varying the compensation for the services of the Senators and Representatives, shall take effect, until an election of representatives shall have intervened.",
+      "status": "PASS",
+      "notes": ""
+    }
+  ]
+}

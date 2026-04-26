@@ -5,3 +5,5 @@ __pycache__/
 venv/
 sample_*.png
 test_*.png
+audio.bak-*/
+*.bak

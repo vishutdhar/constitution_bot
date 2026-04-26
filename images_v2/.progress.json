@@ -1,0 +1,468 @@
+{
+  "total": 77,
+  "completed": 77,
+  "entries": [
+    {
+      "day": 1,
+      "clean_filename": "day_01_preamble.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_01_preamble---8234f229-f2b4-4358-8b26-48260b2f3a4b.png",
+      "title": "Preamble"
+    },
+    {
+      "day": 2,
+      "clean_filename": "day_02_article_i_section_1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_02_article_i_section_1---21aab449-0212-4970-b8c3-f83267fb3914.png",
+      "title": "Article I, Section 1"
+    },
+    {
+      "day": 3,
+      "clean_filename": "day_03_article_i_section_2_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_03_article_i_section_2_cl._1---dec69d9c-7a8b-4f8b-b354-7b096f81aea9.png",
+      "title": "Article I, Section 2, Cl. 1"
+    },
+    {
+      "day": 4,
+      "clean_filename": "day_04_article_i_section_2_cl._2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_04_article_i_section_2_cl._2---30acc970-cf54-4e30-8976-f9fa104a0dc2.png",
+      "title": "Article I, Section 2, Cl. 2"
+    },
+    {
+      "day": 5,
+      "clean_filename": "day_05_article_i_section_2_cl._3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_05_article_i_section_2_cl._3---c57bd36c-ac6a-4b60-8e5e-5b5efc93176a.png",
+      "title": "Article I, Section 2, Cl. 3"
+    },
+    {
+      "day": 6,
+      "clean_filename": "day_06_article_i_section_2_cl._4-5.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_06_article_i_section_2_cl._4-5---6078bc43-a393-4987-a563-bd9cfd61df37.png",
+      "title": "Article I, Section 2, Cl. 4-5"
+    },
+    {
+      "day": 7,
+      "clean_filename": "day_07_article_i_section_3_cl._1-2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_07_article_i_section_3_cl._1-2---cf4c9bc4-b425-4bfa-8f2c-4ca7e7ed7b04.png",
+      "title": "Article I, Section 3, Cl. 1-2"
+    },
+    {
+      "day": 8,
+      "clean_filename": "day_08_article_i_section_3_cl._3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_08_article_i_section_3_cl._3---6971d01d-f651-478f-a433-772046088e79.png",
+      "title": "Article I, Section 3, Cl. 3"
+    },
+    {
+      "day": 9,
+      "clean_filename": "day_09_article_i_section_3_cl._4-5.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_09_article_i_section_3_cl._4-5---559b49c7-aefc-4cbc-bdd0-4a15d14775a8.png",
+      "title": "Article I, Section 3, Cl. 4-5"
+    },
+    {
+      "day": 10,
+      "clean_filename": "day_10_article_i_section_3_cl._6-7.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_10_article_i_section_3_cl._6-7---3c8ad3a7-8a00-4e60-8734-84758d908c03.png",
+      "title": "Article I, Section 3, Cl. 6-7"
+    },
+    {
+      "day": 11,
+      "clean_filename": "day_11_article_i_section_4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_11_article_i_section_4---f715d286-1fef-498b-9547-f72fe9dad40d.png",
+      "title": "Article I, Section 4"
+    },
+    {
+      "day": 12,
+      "clean_filename": "day_12_article_i_section_5_cl._1-2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_12_article_i_section_5_cl._1-2---77355796-17e0-4c7b-a27a-438802ffedd0.png",
+      "title": "Article I, Section 5, Cl. 1-2"
+    },
+    {
+      "day": 13,
+      "clean_filename": "day_13_article_i_section_5_cl._3-4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_13_article_i_section_5_cl._3-4---7079dde1-a0e0-4e3f-9c1f-7be8a1c5edb6.png",
+      "title": "Article I, Section 5, Cl. 3-4"
+    },
+    {
+      "day": 14,
+      "clean_filename": "day_14_article_i_section_6.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_14_article_i_section_6---af892ec6-f5f1-4183-9545-13b8dab96d77.png",
+      "title": "Article I, Section 6"
+    },
+    {
+      "day": 15,
+      "clean_filename": "day_15_article_i_section_7_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_15_article_i_section_7_cl._1---7a0ebd63-dbf8-4f5d-ab08-5b1c8327f700.png",
+      "title": "Article I, Section 7, Cl. 1"
+    },
+    {
+      "day": 16,
+      "clean_filename": "day_16_article_i_section_7_cl._2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_16_article_i_section_7_cl._2---6efd963e-5d89-4231-ba5e-6ac24c835194.png",
+      "title": "Article I, Section 7, Cl. 2"
+    },
+    {
+      "day": 17,
+      "clean_filename": "day_17_article_i_section_8_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_17_article_i_section_8_cl._1---0865bcd0-c2bf-47a8-b47f-685cec0c6591.png",
+      "title": "Article I, Section 8, Cl. 1"
+    },
+    {
+      "day": 18,
+      "clean_filename": "day_18_article_i_section_8_cl._2-4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_18_article_i_section_8_cl._2-4---5c34d90a-164d-432f-8983-48a1f6cb4b49.png",
+      "title": "Article I, Section 8, Cl. 2-4"
+    },
+    {
+      "day": 19,
+      "clean_filename": "day_19_article_i_section_8_cl._5-7.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_19_article_i_section_8_cl._5-7---16b8efef-0ec5-4152-ba67-7ee3c4437a5e.png",
+      "title": "Article I, Section 8, Cl. 5-7"
+    },
+    {
+      "day": 20,
+      "clean_filename": "day_20_article_i_section_8_cl._8-10.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_20_article_i_section_8_cl._8-10---70439ae1-22d5-447b-8cb9-905b719e4bd9.png",
+      "title": "Article I, Section 8, Cl. 8-10"
+    },
+    {
+      "day": 21,
+      "clean_filename": "day_21_article_i_section_8_cl._11-13.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_21_article_i_section_8_cl._11-13---84809ed6-12d4-4aad-b2e8-488d75c4c53f.png",
+      "title": "Article I, Section 8, Cl. 11-13"
+    },
+    {
+      "day": 22,
+      "clean_filename": "day_22_article_i_section_8_cl._14-16.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_22_article_i_section_8_cl._14-16---606cb597-678a-428f-80c6-5293469ed37a.png",
+      "title": "Article I, Section 8, Cl. 14-16"
+    },
+    {
+      "day": 23,
+      "clean_filename": "day_23_article_i_section_8_cl._17-18.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_23_article_i_section_8_cl._17-18---3ec2b7bc-adaa-4bef-a752-3f3ff3b40c97.png",
+      "title": "Article I, Section 8, Cl. 17-18"
+    },
+    {
+      "day": 24,
+      "clean_filename": "day_24_article_i_section_9_cl._1-4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_24_article_i_section_9_cl._1-4---ad343ba1-b364-4df7-bd47-feb4e4b3a8a7.png",
+      "title": "Article I, Section 9, Cl. 1-4"
+    },
+    {
+      "day": 25,
+      "clean_filename": "day_25_article_i_section_9_cl._5-8.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article I, Section 9, Cl. 5-8"
+    },
+    {
+      "day": 26,
+      "clean_filename": "day_26_article_i_section_10.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article I, Section 10"
+    },
+    {
+      "day": 27,
+      "clean_filename": "day_27_article_ii_section_1_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 1, Cl. 1"
+    },
+    {
+      "day": 28,
+      "clean_filename": "day_28_article_ii_section_1_cl._2-3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 1, Cl. 2-3"
+    },
+    {
+      "day": 29,
+      "clean_filename": "day_29_article_ii_section_1_cl._5.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 1, Cl. 5"
+    },
+    {
+      "day": 30,
+      "clean_filename": "day_30_article_ii_section_1_cl._6-8.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 1, Cl. 6-8"
+    },
+    {
+      "day": 31,
+      "clean_filename": "day_31_article_ii_section_1_\u2014_the_oath.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 1 \u2014 The Oath"
+    },
+    {
+      "day": 32,
+      "clean_filename": "day_32_article_ii_section_2_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 2, Cl. 1"
+    },
+    {
+      "day": 33,
+      "clean_filename": "day_33_article_ii_section_2_cl._2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 2, Cl. 2"
+    },
+    {
+      "day": 34,
+      "clean_filename": "day_34_article_ii_section_3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 3"
+    },
+    {
+      "day": 35,
+      "clean_filename": "day_35_article_ii_section_4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Article II, Section 4"
+    },
+    {
+      "day": 36,
+      "clean_filename": "day_36_article_iii_section_1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_36_article_iii_section_1---f0f5b203-b2f9-4e46-ae32-74929158caf6.png",
+      "title": "Article III, Section 1"
+    },
+    {
+      "day": 37,
+      "clean_filename": "day_37_article_iii_section_2_cl._1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_37_article_iii_section_2_cl._1---f84c9c4a-5334-41a9-8d8f-38c251eabf24.png",
+      "title": "Article III, Section 2, Cl. 1"
+    },
+    {
+      "day": 38,
+      "clean_filename": "day_38_article_iii_section_2_cl._2-3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_38_article_iii_section_2_cl._2-3---6efd3122-3cac-4d53-9e69-6a5f0c1a0da1.png",
+      "title": "Article III, Section 2, Cl. 2-3"
+    },
+    {
+      "day": 39,
+      "clean_filename": "day_39_article_iii_section_3.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_39_article_iii_section_3---8e4d0739-867e-4647-9ced-0fe556fb6a21.png",
+      "title": "Article III, Section 3"
+    },
+    {
+      "day": 40,
+      "clean_filename": "day_40_article_iv_section_1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_40_article_iv_section_1---edd5dbc8-6e3c-4a32-af38-ed7e769c6226.png",
+      "title": "Article IV, Section 1"
+    },
+    {
+      "day": 41,
+      "clean_filename": "day_41_article_iv_section_2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_41_article_iv_section_2---93c8b530-c795-4927-9406-8b1718bb251d.png",
+      "title": "Article IV, Section 2"
+    },
+    {
+      "day": 42,
+      "clean_filename": "day_42_article_iv_section_3-4.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_42_article_iv_section_3-4---798d4061-1e8d-4dba-b6b6-d634eae0eda8.png",
+      "title": "Article IV, Section 3-4"
+    },
+    {
+      "day": 43,
+      "clean_filename": "day_43_article_v.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_43_article_v---5e74599b-b628-4a79-b808-1dcab963ae49.png",
+      "title": "Article V"
+    },
+    {
+      "day": 44,
+      "clean_filename": "day_44_article_vi.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_44_article_vi---9db0b5c2-3f76-4675-9879-c6f469441d86.png",
+      "title": "Article VI"
+    },
+    {
+      "day": 45,
+      "clean_filename": "day_45_article_vii.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_45_article_vii---46ea44bd-c4df-418f-bc4c-bce4cba68ba4.png",
+      "title": "Article VII"
+    },
+    {
+      "day": 46,
+      "clean_filename": "day_46_amendment_i_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_46_amendment_i_(1791)---10fe06ab-0228-4672-aa04-ac669476ded1.png",
+      "title": "Amendment I (1791)"
+    },
+    {
+      "day": 47,
+      "clean_filename": "day_47_amendment_ii_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_47_amendment_ii_(1791)---c9a90091-f9a4-46cc-b7f0-25833cf112cd.png",
+      "title": "Amendment II (1791)"
+    },
+    {
+      "day": 48,
+      "clean_filename": "day_48_amendment_iii_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_48_amendment_iii_(1791)---ec4286ac-b572-4ff5-93b4-da2c9611a522.png",
+      "title": "Amendment III (1791)"
+    },
+    {
+      "day": 49,
+      "clean_filename": "day_49_amendment_iv_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_49_amendment_iv_(1791)---9fa21d21-ec91-4910-8c28-5a81569b6f6d.png",
+      "title": "Amendment IV (1791)"
+    },
+    {
+      "day": 50,
+      "clean_filename": "day_50_amendment_v_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_50_amendment_v_(1791)---e10a0473-338a-4d0f-ae0c-2963cd32ce07.png",
+      "title": "Amendment V (1791)"
+    },
+    {
+      "day": 51,
+      "clean_filename": "day_51_amendment_vi_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_51_amendment_vi_(1791)---1fe51f16-99f9-4e21-8db7-3a97591d69cb.png",
+      "title": "Amendment VI (1791)"
+    },
+    {
+      "day": 52,
+      "clean_filename": "day_52_amendment_vii_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_52_amendment_vii_(1791)---72366644-51b7-4946-9ebb-52cb593a3ae5.png",
+      "title": "Amendment VII (1791)"
+    },
+    {
+      "day": 53,
+      "clean_filename": "day_53_amendment_viii_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_53_amendment_viii_(1791)---88f75e01-33b3-4535-a128-1e894cf39897.png",
+      "title": "Amendment VIII (1791)"
+    },
+    {
+      "day": 54,
+      "clean_filename": "day_54_amendment_ix_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_54_amendment_ix_(1791)---10ea8115-ae79-4990-b278-cd412604b4a7.png",
+      "title": "Amendment IX (1791)"
+    },
+    {
+      "day": 55,
+      "clean_filename": "day_55_amendment_x_(1791).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_55_amendment_x_(1791)---cf379b8a-725a-401d-a2bb-5e895db29511.png",
+      "title": "Amendment X (1791)"
+    },
+    {
+      "day": 56,
+      "clean_filename": "day_56_amendment_xi_(1795).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_56_amendment_xi_(1795)---0939bdcc-0098-464b-848e-37a2a18e39d1.png",
+      "title": "Amendment XI (1795)"
+    },
+    {
+      "day": 57,
+      "clean_filename": "day_57_amendment_xii_(1804)_\u2014_part_1.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_57_amendment_xii_(1804)_\u2014_part_1---8ece793e-21e5-4622-a85b-9756a5933ed8.png",
+      "title": "Amendment XII (1804) \u2014 Part 1"
+    },
+    {
+      "day": 58,
+      "clean_filename": "day_58_amendment_xii_(1804)_\u2014_part_2.png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_58_amendment_xii_(1804)_\u2014_part_2---c0e66dc9-aade-4dc3-ba6b-b341041b54a8.png",
+      "title": "Amendment XII (1804) \u2014 Part 2"
+    },
+    {
+      "day": 59,
+      "clean_filename": "day_59_amendment_xiii_(1865).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_59_amendment_xiii_(1865)---b08871e5-7056-4012-ac44-f883e43b5f48.png",
+      "title": "Amendment XIII (1865)"
+    },
+    {
+      "day": 60,
+      "clean_filename": "day_60_amendment_xiv_section_1_(1868).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_60_amendment_xiv_section_1_(1868)---3f4fff26-2cf0-4114-9435-3cf4ae7a86f2.png",
+      "title": "Amendment XIV, Section 1 (1868)"
+    },
+    {
+      "day": 61,
+      "clean_filename": "day_61_amendment_xiv_section_2-3_(1868).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_61_amendment_xiv_section_2-3_(1868)---4756951b-d404-4998-9b5c-1fd87f413b94.png",
+      "title": "Amendment XIV, Section 2-3 (1868)"
+    },
+    {
+      "day": 62,
+      "clean_filename": "day_62_amendment_xiv_section_4-5_(1868).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_62_amendment_xiv_section_4-5_(1868)---f81e0844-fd3b-42de-99a4-aa831ab28a78.png",
+      "title": "Amendment XIV, Section 4-5 (1868)"
+    },
+    {
+      "day": 63,
+      "clean_filename": "day_63_amendment_xv_(1870).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_63_amendment_xv_(1870)---0c23b9c0-d68e-4dac-abb4-952bd2c22944.png",
+      "title": "Amendment XV (1870)"
+    },
+    {
+      "day": 64,
+      "clean_filename": "day_64_amendment_xvi_(1913).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_64_amendment_xvi_(1913)---1b4f8f47-5e99-4266-8b48-a9283f4bc454.png",
+      "title": "Amendment XVI (1913)"
+    },
+    {
+      "day": 65,
+      "clean_filename": "day_65_amendment_xvii_(1913).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_65_amendment_xvii_(1913)---4f1f000e-e260-4fca-94a6-8d518905d13b.png",
+      "title": "Amendment XVII (1913)"
+    },
+    {
+      "day": 66,
+      "clean_filename": "day_66_amendment_xviii_(1919).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_66_amendment_xviii_(1919)---f10d96c4-6a8f-4520-9c4d-88669ace40e2.png",
+      "title": "Amendment XVIII (1919)"
+    },
+    {
+      "day": 67,
+      "clean_filename": "day_67_amendment_xix_(1920).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_67_amendment_xix_(1920)---d1a860aa-b81b-4c6f-8214-4e7e00693c25.png",
+      "title": "Amendment XIX (1920)"
+    },
+    {
+      "day": 68,
+      "clean_filename": "day_68_amendment_xx_section_1-2_(1933).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_68_amendment_xx_section_1-2_(1933)---fd8fe398-0cd5-429f-ace9-818a6b94148a.png",
+      "title": "Amendment XX, Section 1-2 (1933)"
+    },
+    {
+      "day": 69,
+      "clean_filename": "day_69_amendment_xx_section_3-4_(1933).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_69_amendment_xx_section_3-4_(1933)---49e1b3a6-9816-49c2-b26a-76957c005e86.png",
+      "title": "Amendment XX, Section 3-4 (1933)"
+    },
+    {
+      "day": 70,
+      "clean_filename": "day_70_amendment_xxi_(1933).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_70_amendment_xxi_(1933)---46ea4ba6-847c-4109-80be-bf8e5a412d73.png",
+      "title": "Amendment XXI (1933)"
+    },
+    {
+      "day": 71,
+      "clean_filename": "day_71_amendment_xxii_(1951).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_71_amendment_xxii_(1951)---ae719ad7-698e-4d0f-95ee-1e78b0d8dae3.png",
+      "title": "Amendment XXII (1951)"
+    },
+    {
+      "day": 72,
+      "clean_filename": "day_72_amendment_xxiii_(1961).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_72_amendment_xxiii_(1961)---a7366dce-c119-4d82-8437-067123439129.png",
+      "title": "Amendment XXIII (1961)"
+    },
+    {
+      "day": 73,
+      "clean_filename": "day_73_amendment_xxiv_(1964).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_73_amendment_xxiv_(1964)---6b7cc2a1-ac4d-4d32-94af-4bcaece77f1c.png",
+      "title": "Amendment XXIV (1964)"
+    },
+    {
+      "day": 74,
+      "clean_filename": "day_74_amendment_xxv_section_1-2_(1967).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_74_amendment_xxv_section_1-2_(1967)---4414f14d-0ac9-4901-958e-dbc6bdcdc4b7.png",
+      "title": "Amendment XXV, Section 1-2 (1967)"
+    },
+    {
+      "day": 75,
+      "clean_filename": "day_75_amendment_xxv_section_3-4_(1967).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_75_amendment_xxv_section_3-4_(1967)---e14bf48f-fc54-4376-a63e-9f10a0b69501.png",
+      "title": "Amendment XXV, Section 3-4 (1967)"
+    },
+    {
+      "day": 76,
+      "clean_filename": "day_76_amendment_xxvi_(1971).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_76_amendment_xxvi_(1971)---b8251d39-1c9f-493c-ba6f-4f7cfd9793da.png",
+      "title": "Amendment XXVI (1971)"
+    },
+    {
+      "day": 77,
+      "clean_filename": "day_77_amendment_xxvii_(1992).png",
+      "source_uuid_path": "/Users/openclaw/.openclaw/media/tool-image-generation/day_77_amendment_xxvii_(1992)---580e348b-a437-4aea-a01f-f6116c6da62e.png",
+      "title": "Amendment XXVII (1992)"
+    }
+  ]
+}
