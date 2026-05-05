@@ -1,17 +1,20 @@
 # Post one section of the U.S. Constitution daily during peak engagement.
-# 13:00 UTC = 9 AM EDT (summer) / 8 AM EST (winter) is the primary window.
-# 17:00 and 21:00 UTC are retry windows that catch transient X API failures
-# without missing a day. The bot is idempotent — later runs exit cleanly
-# when today's post already succeeded (see already_posted_today() in bot.py).
-# State is persisted via git commit back to the repo.
+# Cron times are deliberately off-the-hour to avoid GitHub Actions' shared
+# scheduled-runner queue contention at top-of-hour slots, which was causing
+# 1–2h drift and occasional runner-acquisition failures (May 2026).
+# 12:23 UTC ≈ 8:23 AM EDT (primary). 16:47 UTC ≈ 12:47 PM EDT and
+# 20:11 UTC ≈ 4:11 PM EDT are retry windows. The bot is idempotent —
+# later runs exit cleanly when today's post already succeeded (see
+# already_posted_today() in bot.py). State is persisted via git commit
+# back to the repo.
 
 name: Daily Constitution Post
 
 on:
   schedule:
-    - cron: "0 13 * * *"
-    - cron: "0 17 * * *"
-    - cron: "0 21 * * *"
+    - cron: "23 12 * * *"
+    - cron: "47 16 * * *"
+    - cron: "11 20 * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 # Prevent overlapping runs (e.g., manual trigger during scheduled run)
