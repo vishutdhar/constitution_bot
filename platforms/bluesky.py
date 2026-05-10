@@ -43,7 +43,14 @@ class BlueskyPlatform(BasePlatform):
         return BLUESKY_POST_LIMIT
 
     def validate_length(self, text: str) -> bool:
-        return weighted_len(text) <= self.max_length
+        # Bluesky's post() splits long content across a reply thread, so the
+        # bot.py pre-flight gate (`platform.validate_length(fallback_tweet)`)
+        # should always pass for this platform. Returning False would cause
+        # bot.py to skip Bluesky AND mark the whole run as all_success=False,
+        # blocking state advancement on every entry > 300 chars (i.e. nearly
+        # all of them). The 300-char limit still applies per individual post,
+        # enforced inside post() by the per-chunk splitter.
+        return True
 
     def authenticate(self) -> None:
         self._client = Client()
