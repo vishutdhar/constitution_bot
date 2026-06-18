@@ -20,6 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from platforms.bluesky import BlueskyPlatform
 from platforms.x_twitter import XTwitterPlatform, weighted_len
 
 # ---------------------------------------------------------------------------
@@ -264,19 +265,21 @@ def init_platforms() -> list:
         missing = [k for k, v in x_keys.items() if not v]
         print(f"⚠️  X (Twitter) disabled — missing env vars: {', '.join(missing)}")
 
-    # --- Future platforms ---
-    # To add a new platform:
-    # 1. Create platforms/bluesky.py (inherit from BasePlatform)
-    # 2. Add initialization here, gated by env vars
-    # Example:
-    # if os.getenv("BLUESKY_HANDLE") and os.getenv("BLUESKY_APP_PASSWORD"):
-    #     from platforms.bluesky import BlueskyPlatform
-    #     bsky = BlueskyPlatform(
-    #         handle=os.getenv("BLUESKY_HANDLE"),
-    #         app_password=os.getenv("BLUESKY_APP_PASSWORD"),
-    #     )
-    #     bsky.authenticate()
-    #     platforms.append(bsky)
+    # --- Bluesky (AT Protocol) ---
+    # Free API, no per-post charges. Generate an app password at
+    # https://bsky.app/settings/app-passwords (do NOT use your main password).
+    bluesky_handle = os.getenv("BLUESKY_HANDLE")
+    bluesky_app_password = os.getenv("BLUESKY_APP_PASSWORD")
+
+    if bluesky_handle and bluesky_app_password:
+        bsky = BlueskyPlatform(handle=bluesky_handle, app_password=bluesky_app_password)
+        bsky.authenticate()
+        platforms.append(bsky)
+    else:
+        missing = [
+            k for k, v in (("BLUESKY_HANDLE", bluesky_handle), ("BLUESKY_APP_PASSWORD", bluesky_app_password)) if not v
+        ]
+        print(f"⚠️  Bluesky disabled — missing env vars: {', '.join(missing)}")
 
     return platforms
 
