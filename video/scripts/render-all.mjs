@@ -19,7 +19,14 @@ const ROOT = path.resolve(__dirname, "..");
 
 const days = JSON.parse(readFileSync(path.join(ROOT, "data", "days.json"), "utf8"));
 
-const onlyDays = process.argv.slice(2).map(Number).filter((n) => Number.isFinite(n));
+const rawDayArgs = process.argv.slice(2);
+const onlyDays = rawDayArgs.map(Number).filter((n) => Number.isInteger(n));
+// If args were given but none parse to a valid day number (e.g. "1,2" or "foo"),
+// fail fast instead of silently falling through to rendering all 77.
+if (rawDayArgs.length > 0 && onlyDays.length === 0) {
+  console.error(`No valid day numbers in arguments: ${rawDayArgs.join(" ")}`);
+  process.exit(1);
+}
 const targets = onlyDays.length ? days.filter((d) => onlyDays.includes(d.day)) : days;
 
 if (targets.length === 0) {
