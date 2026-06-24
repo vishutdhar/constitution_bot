@@ -31,6 +31,7 @@ class BasePlatform(ABC):
         self,
         text: str,
         *,
+        video_path: str | None = None,
         image_path: str | None = None,
         image_text: str | None = None,
         body_text: str | None = None,
@@ -40,9 +41,12 @@ class BasePlatform(ABC):
         Publish a post to the platform.
 
         Args:
-            text: Full text content (used as fallback if image upload fails).
-            image_path: Optional path to an image file to attach.
-            image_text: Optional caption for the image tweet (used as tweet 1).
+            text: Full text content (used as fallback if media upload fails).
+            video_path: Optional path to a video file to attach. Preferred over
+                image_path when both are provided.
+            image_path: Optional path to an image file to attach (used when no
+                video is given, or as a fallback if the video upload fails).
+            image_text: Optional caption for the media tweet (used as tweet 1).
             body_text: Optional constitutional text posted as reply thread.
             reply_char_limit: Max chars per reply tweet (280 free, 4000 Premium).
 

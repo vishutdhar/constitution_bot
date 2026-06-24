@@ -309,6 +309,50 @@ class XTwitterPlatform(BasePlatform):
             print(f"⚠️  Image upload failed: {_format_error_detail(e)}")
             return None
 
+    def _upload_video(self, video_path: str) -> str | None:
+        """
+        Upload a video via the v1.1 chunked upload endpoints.
+
+        Uses tweepy's chunked media_upload (INIT/APPEND/FINALIZE) with
+        media_category="tweet_video" and waits for X's async transcode to
+        finish. tweepy returns even when async processing FAILS, so we inspect
+        processing_info explicitly and only return a media_id on "succeeded".
+
+        Returns:
+            media_id string on success, None on failure (caller falls back).
+        """
+        if self._api_v1 is None:
+            print("⚠️  v1.1 API not initialized — cannot upload video")
+            return None
+
+        try:
+            media = self._api_v1.media_upload(
+                filename=video_path,
+                chunked=True,
+                media_category="tweet_video",
+                wait_for_async_finalize=True,
+            )
+        except tweepy.TweepyException as e:
+            print(f"⚠️  Video upload failed: {_format_error_detail(e)}")
+            return None
+
+        # chunked_upload polls until processing leaves pending/in_progress but
+        # does NOT raise on a "failed" state — check it ourselves.
+        info = getattr(media, "processing_info", None)
+        if info is not None:
+            state = info.get("state")
+            if state != "succeeded" or "error" in info:
+                print(f"⚠️  Video processing did not succeed (state={state}, info={info})")
+                return None
+
+        media_id = getattr(media, "media_id", None)
+        if media_id is None:
+            print("⚠️  Video upload returned no media_id")
+            return None
+
+        print(f"✅ Video uploaded (media_id: {media_id})")
+        return str(media_id)
+
     def _create_tweet_with_retry(self, retries: int = 2, **kwargs) -> tweepy.Response:
         """
         Wrapper around create_tweet with per-tweet retry.
@@ -365,22 +409,24 @@ class XTwitterPlatform(BasePlatform):
         self,
         text: str,
         *,
+        video_path: str | None = None,
         image_path: str | None = None,
         image_text: str | None = None,
         body_text: str | None = None,
         reply_char_limit: int = 280,
     ) -> dict:
         """
-        Post a tweet, optionally with an image and reply thread.
+        Post a tweet, optionally with media (video preferred) and a reply thread.
 
-        When image_path is provided:
-          1. Upload image via v1.1 API
-          2. Post image tweet (image_text + image)
-          3. Post body_text as reply thread below the image tweet
-          If image upload fails, falls back to text-only posting.
+        Media resolution order:
+          1. video_path — upload via chunked v1.1 API (preferred when given)
+          2. image_path — upload via v1.1 API (used when no video, or as a
+             fallback if the video upload fails)
+          3. neither / all uploads failed — post text-only
 
-        When image_path is not provided:
-          Posts text-only using existing split_into_thread() logic.
+        When media is attached:
+          - Tweet 1 = image_text (or text) + the media
+          - body_text is posted as a reply thread below tweet 1
 
         Returns:
             dict with success, url, tweet_id, thread_length, error keys.
@@ -389,19 +435,27 @@ class XTwitterPlatform(BasePlatform):
             raise RuntimeError("Call authenticate() before posting.")
 
         try:
-            # --- Text-only mode (no image provided) ---
-            if not image_path:
-                return self._post_text_only(text, max_len=reply_char_limit)
+            # --- Resolve media: prefer video, then image, else text-only ---
+            media_id = None
+            media_kind = None
 
-            # --- Image mode ---
-            media_id = self._upload_image(image_path)
+            if video_path:
+                media_id = self._upload_video(video_path)
+                if media_id is not None:
+                    media_kind = "video"
+
+            if media_id is None and image_path:
+                media_id = self._upload_image(image_path)
+                if media_id is not None:
+                    media_kind = "image"
 
             if media_id is None:
-                # Fallback: image upload failed, post text-only
-                print("⚠️  Falling back to text-only post")
+                # No media requested, or every upload failed → text-only.
+                if video_path or image_path:
+                    print("⚠️  Falling back to text-only post")
                 return self._post_text_only(text, max_len=reply_char_limit)
 
-            # Post image tweet
+            # Post the media tweet (tweet 1)
             caption = image_text or text
             response = self._create_tweet_with_retry(
                 text=caption,
@@ -409,7 +463,7 @@ class XTwitterPlatform(BasePlatform):
             )
             first_id = response.data["id"]
             url = f"https://x.com/{self._username}/status/{first_id}"
-            print(f"✅ Posted image tweet to X: {url}")
+            print(f"✅ Posted {media_kind} tweet to X: {url}")
 
             thread_count = 1
 
