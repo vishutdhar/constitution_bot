@@ -24,6 +24,14 @@ if (rawDayArgs.length > 0 && onlyDays.length === 0) {
   process.exit(1);
 }
 const targets = onlyDays.length ? days.filter((d) => onlyDays.includes(d.day)) : days;
+
+// Surface requested day numbers that don't exist (e.g. a typo) instead of
+// silently dropping them.
+const unknown = onlyDays.filter((n) => !days.some((d) => d.day === n));
+if (unknown.length) {
+  console.warn(`⚠️  Ignoring unknown day number(s): ${unknown.join(", ")}`);
+}
+
 if (targets.length === 0) {
   console.error("No matching days for stills.");
   process.exit(1);

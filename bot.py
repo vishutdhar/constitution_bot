@@ -183,7 +183,9 @@ def resolve_video_path(day_num: int) -> str | None:
     """
     video_path = VIDEOS_DIR / f"day_{day_num:02d}.mp4"
     if not video_path.exists():
-        print(f"⚠️  Video file not found: {video_path}")
+        # Absence is an expected, documented fallback (videos are gitignored and
+        # may not be fetched in CI), so this is informational, not a warning.
+        print(f"ℹ️  No video for day {day_num} ({video_path.name}); using image")
         return None
 
     return str(video_path)
@@ -248,6 +250,8 @@ def log_post(entry: dict, result: dict, platform: str) -> None:
             "section": entry["section"],
             "platform": platform,
             "success": result["success"],
+            "partial": result.get("partial", False),
+            "media_kind": result.get("media_kind"),
             "url": result.get("url"),
             "error": result.get("error"),
         }
@@ -420,19 +424,26 @@ def main():
 
     all_success = True
     for platform in platforms:
-        if not platform.validate_length(fallback_tweet):
-            print(f"⚠️  Post too long for {platform.name} ({weighted_len(fallback_tweet)} > {platform.max_length})")
+        # Gate on the text actually sent: when media is attached, tweet 1 is the
+        # short image_text (the long fallback_tweet is never sent on that path).
+        gate_text = image_text if media_path else fallback_tweet
+        if not platform.validate_length(gate_text):
+            print(f"⚠️  Post too long for {platform.name} ({weighted_len(gate_text)} > {platform.max_length})")
             all_success = False
             continue
 
-        result = platform.post(
-            fallback_tweet,
-            video_path=video_path,
-            image_path=image_path,
-            image_text=image_text,
-            body_text=body_text,
-            reply_char_limit=REPLY_CHAR_LIMIT,
-        )
+        # Only pass video_path when set, so a platform whose post() predates the
+        # video parameter (e.g. Bluesky on its feature branch) still works.
+        post_kwargs = {
+            "image_path": image_path,
+            "image_text": image_text,
+            "body_text": body_text,
+            "reply_char_limit": REPLY_CHAR_LIMIT,
+        }
+        if video_path:
+            post_kwargs["video_path"] = video_path
+
+        result = platform.post(fallback_tweet, **post_kwargs)
         log_post(entry, result, platform.name)
 
         if not result["success"]:

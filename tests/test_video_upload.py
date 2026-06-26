@@ -1,9 +1,14 @@
 """
-Regression test for XTwitterPlatform._upload_video (no network, no pytest).
+Regression tests for XTwitterPlatform media posting (no network, no pytest).
 
-X's chunked video upload finishes asynchronously, and tweepy returns the media
-object even when the async transcode FAILED. So _upload_video must inspect
-processing_info itself and only return a media_id on a "succeeded" state.
+Covers:
+  - _upload_video: X's chunked video upload finishes asynchronously and tweepy
+    returns the media object even when the transcode FAILED, so _upload_video
+    inspects processing_info and only returns a media_id on "succeeded"; it must
+    also never raise (broad except), so the caller can always fall back.
+  - post(): if the lead tweet is live but a reply fails, the result must be a
+    PARTIAL success (so bot.py advances state and does not re-post the lead,
+    which would duplicate it).
 
 Run:  python tests/test_video_upload.py     (exit 0 = pass, 1 = fail)
 """
@@ -13,9 +18,13 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tweepy  # noqa: E402
+import platforms.x_twitter as xmod  # noqa: E402
 from platforms.x_twitter import XTwitterPlatform  # noqa: E402
 
 
+# --------------------------------------------------------------------------
+# _upload_video stubs
+# --------------------------------------------------------------------------
 class FakeMedia:
     """Mimics tweepy.models.Media: media_id and/or processing_info, both optional."""
 
@@ -34,7 +43,6 @@ class FakeAPI:
         self.exc = exc
 
     def media_upload(self, **kwargs):
-        # Video must go through the chunked + async-finalize path.
         assert kwargs.get("chunked") is True
         assert kwargs.get("media_category") == "tweet_video"
         assert kwargs.get("wait_for_async_finalize") is True
@@ -51,34 +59,86 @@ def _check(name, api, expected, failures):
         failures.append(f"{name}: got {got!r}, expected {expected!r}")
 
 
+# --------------------------------------------------------------------------
+# post() / reply-thread stubs
+# --------------------------------------------------------------------------
+class FakeClient:
+    """Stands in for tweepy.Client; can fail the lead or the reply tweets."""
+
+    def __init__(self, fail_lead=False, fail_replies=False):
+        self.fail_lead = fail_lead
+        self.fail_replies = fail_replies
+        self.n = 0
+
+    def create_tweet(self, **kwargs):
+        self.n += 1
+        is_reply = kwargs.get("in_reply_to_tweet_id") is not None
+        if (is_reply and self.fail_replies) or (not is_reply and self.fail_lead):
+            raise tweepy.TweepyException("simulated failure")
+        return type("R", (), {"data": {"id": f"id{self.n}"}})()
+
+
+def _post(client, **post_kwargs):
+    p = XTwitterPlatform("k", "s", "t", "ts")
+    p._username = "USC1787"
+    p._client = client
+    p._upload_image = lambda path: "media1"  # pretend the image uploaded
+    return p.post("fallback text", image_path="/x.png", image_text="cap", **post_kwargs)
+
+
+def test_post(failures):
+    # Long body so split_text_for_replies produces multiple reply chunks.
+    body = " ".join(f"word{i}" for i in range(120))
+
+    # Lead + replies all succeed -> full success, not partial.
+    r = _post(FakeClient(), body_text=body, reply_char_limit=280)
+    if not (r["success"] and not r["partial"] and r["media_kind"] == "image" and r["thread_length"] > 1):
+        failures.append(f"post_full_success: {r}")
+
+    # Lead posts, a reply fails -> PARTIAL success (state should advance).
+    r = _post(FakeClient(fail_replies=True), body_text=body, reply_char_limit=280)
+    if not (r["success"] and r["partial"] and r["tweet_id"] is not None and r["media_kind"] == "image"):
+        failures.append(f"post_partial: {r}")
+
+    # Lead itself fails -> hard failure, nothing posted.
+    r = _post(FakeClient(fail_lead=True), body_text=body, reply_char_limit=280)
+    if not (r["success"] is False and r["partial"] is False and r["tweet_id"] is None):
+        failures.append(f"post_lead_failure: {r}")
+
+
 def main():
     failures = []
 
-    # Async transcode succeeded -> media_id as string.
+    # --- _upload_video ---
     _check("succeeded", FakeAPI(FakeMedia(123, {"state": "succeeded"})), "123", failures)
-    # Async transcode failed -> None (caller falls back).
     _check("failed_state", FakeAPI(FakeMedia(123, {"state": "failed", "error": {"name": "InvalidMedia"}})), None, failures)
-    # Error key present even mid-flight -> None.
     _check("error_key", FakeAPI(FakeMedia(123, {"state": "in_progress", "error": {"code": 1}})), None, failures)
-    # Small video uploaded synchronously (no processing_info) -> media_id.
     _check("no_processing_info", FakeAPI(FakeMedia(456)), "456", failures)
-    # Missing media_id -> None.
     _check("no_media_id", FakeAPI(FakeMedia(None, {"state": "succeeded"})), None, failures)
-    # tweepy raised -> None.
     _check("tweepy_exception", FakeAPI(exc=tweepy.TweepyException("boom")), None, failures)
+    # A non-TweepyException from inside tweepy (e.g. KeyError on a malformed
+    # processing_info) must also be caught and fall back, not crash.
+    _check("keyerror_from_tweepy", FakeAPI(exc=KeyError("state")), None, failures)
 
-    # v1.1 API not initialized -> None.
     platform = XTwitterPlatform("k", "s", "t", "ts")
     platform._api_v1 = None
     if platform._upload_video("/fake.mp4") is not None:
         failures.append("api_none: expected None")
+
+    # --- post() partial-success handling (no real sleeps during retries) ---
+    orig_sleep = xmod.time.sleep
+    xmod.time.sleep = lambda *a, **k: None
+    try:
+        test_post(failures)
+    finally:
+        xmod.time.sleep = orig_sleep
 
     if failures:
         print("FAILED:")
         for f in failures:
             print("  -", f)
         return 1
-    print("All _upload_video cases passed.")
+    print("All media-posting cases passed.")
     return 0
 
 
