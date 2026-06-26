@@ -1,0 +1,24 @@
+{
+  "name": "constitution-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion video generator for the Constitution Bot (one vertical video per day, 1-77).",
+  "scripts": {
+    "studio": "remotion studio",
+    "render-all": "node scripts/render-all.mjs",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.482",
+    "@remotion/cli": "4.0.482",
+    "@remotion/media": "4.0.482",
+    "@remotion/renderer": "4.0.482",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.482"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.5.4"
+  }
+}
