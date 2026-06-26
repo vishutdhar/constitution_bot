@@ -63,11 +63,17 @@ def _check(name, api, expected, failures):
 # post() / reply-thread stubs
 # --------------------------------------------------------------------------
 class FakeClient:
-    """Stands in for tweepy.Client; can fail the lead or the reply tweets."""
+    """
+    Stands in for tweepy.Client. Can fail a tweet by raising a TweepyException,
+    or by returning a 200 with no data (Response(data=None)) — which tweepy does
+    NOT raise on, so `response.data["id"]` then raises a non-Tweepy TypeError.
+    """
 
-    def __init__(self, fail_lead=False, fail_replies=False):
+    def __init__(self, fail_lead=False, fail_replies=False, none_lead=False, none_replies=False):
         self.fail_lead = fail_lead
         self.fail_replies = fail_replies
+        self.none_lead = none_lead
+        self.none_replies = none_replies
         self.n = 0
 
     def create_tweet(self, **kwargs):
@@ -75,6 +81,8 @@ class FakeClient:
         is_reply = kwargs.get("in_reply_to_tweet_id") is not None
         if (is_reply and self.fail_replies) or (not is_reply and self.fail_lead):
             raise tweepy.TweepyException("simulated failure")
+        if (is_reply and self.none_replies) or (not is_reply and self.none_lead):
+            return type("R", (), {"data": None})()  # 200 with no data
         return type("R", (), {"data": {"id": f"id{self.n}"}})()
 
 
@@ -104,6 +112,17 @@ def test_post(failures):
     r = _post(FakeClient(fail_lead=True), body_text=body, reply_char_limit=280)
     if not (r["success"] is False and r["partial"] is False and r["tweet_id"] is None):
         failures.append(f"post_lead_failure: {r}")
+
+    # Lead live, but a reply returns 200-with-no-data (TypeError on id, a
+    # NON-Tweepy error) -> must still be a PARTIAL, not an uncaught crash.
+    r = _post(FakeClient(none_replies=True), body_text=body, reply_char_limit=280)
+    if not (r["success"] and r["partial"] and r["tweet_id"] is not None):
+        failures.append(f"post_partial_nondata_reply: {r}")
+
+    # Lead returns 200-with-no-data -> hard failure, no crash (first_id never set).
+    r = _post(FakeClient(none_lead=True), body_text=body, reply_char_limit=280)
+    if not (r["success"] is False and r["partial"] is False and r["tweet_id"] is None):
+        failures.append(f"post_lead_nondata: {r}")
 
 
 def main():

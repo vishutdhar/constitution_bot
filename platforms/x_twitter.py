@@ -446,7 +446,11 @@ class XTwitterPlatform(BasePlatform):
             url = f"https://x.com/{self._username}/status/{first_id}"
             print(f"✅ Posted to X: {url}")
             return self._post_ok(url, first_id, posted, media_kind="text")
-        except tweepy.TweepyException as e:
+        except Exception as e:
+            # Broad on purpose: once the lead tweet is live, even a NON-Tweepy
+            # error (e.g. a 200 response with no "data" → TypeError on
+            # response.data["id"]) must route through _post_failed so a live lead
+            # is recorded as a partial and never re-posted as a duplicate.
             return self._post_failed(e, first_id, posted, media_kind="text")
 
     def post(
@@ -534,5 +538,7 @@ class XTwitterPlatform(BasePlatform):
                 print(f"✅ Reply thread complete ({posted} total tweets)")
 
             return self._post_ok(url, first_id, posted, media_kind)
-        except tweepy.TweepyException as e:
+        except Exception as e:
+            # See _post_text_only: broaden so a non-Tweepy raise after the lead
+            # is live still becomes a partial (no duplicate), not an uncaught crash.
             return self._post_failed(e, first_id, posted, media_kind)
