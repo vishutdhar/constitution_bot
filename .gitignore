@@ -7,3 +7,10 @@ sample_*.png
 test_*.png
 audio.bak-*/
 *.bak
+
+# Rendered Remotion videos + build artifacts (regenerate via video/scripts/render-all.mjs).
+# video/ also has its own .gitignore; this is a defensive root-level guard so a
+# stray render can't accidentally commit ~1.1GB of MP4s.
+video/videos/
+video/out/
+video/node_modules/
