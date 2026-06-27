@@ -1,0 +1,2 @@
+# Durable per-UTC-day claim files (claims/YYYY-MM-DD.json) live here.
+# They are the idempotency record and MUST be committed. See docs/IDEMPOTENCY.md.

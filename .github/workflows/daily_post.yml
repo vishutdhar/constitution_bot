@@ -3,10 +3,12 @@
 # scheduled-runner queue contention at top-of-hour slots, which was causing
 # 1–2h drift and occasional runner-acquisition failures (May 2026).
 # 12:23 UTC ≈ 8:23 AM EDT (primary). 16:47 UTC ≈ 12:47 PM EDT and
-# 20:11 UTC ≈ 4:11 PM EDT are retry windows. The bot is idempotent —
-# later runs exit cleanly when today's post already succeeded (see
-# already_posted_today() in bot.py). State is persisted via git commit
-# back to the repo.
+# 20:11 UTC ≈ 4:11 PM EDT are retry windows.
+#
+# Idempotency (see docs/IDEMPOTENCY.md): a per-UTC-day claim file is committed
+# and PUSHED to origin/main BEFORE the irreversible X post. The post step runs
+# only when that push succeeds, so a crash/push-failure after posting can never
+# cause a duplicate on a later window. The fast-forward push is the mutex.
 
 name: Daily Constitution Post
 
@@ -41,19 +43,57 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # 1) Durably claim today BEFORE posting. The push is the fence: if it
+      #    succeeds we own today and may post; if it's rejected or there's
+      #    nothing to claim, we skip. No X credentials here (least privilege).
+      - name: Claim today
+        id: claim
+        run: |
+          git config user.name "Constitution Bot"
+          git config user.email "bot@users.noreply.github.com"
+          python bot.py --claim
+          git add claims/
+          if git diff --cached --quiet; then
+            echo "CLAIM_OK=false" >> "$GITHUB_OUTPUT"
+            echo "Already claimed/posted today — skipping post."
+            exit 0
+          fi
+          git commit -m "Claim $(date -u +%F)"
+          # Fast-forward push ONLY. Do NOT add 'git pull --rebase' here: the push
+          # IS the mutex. If another window already claimed today, this push is
+          # rejected (non-fast-forward) and we must not post. Rebasing would let a
+          # race-loser re-stack its claim onto the winner and double-post.
+          if git push origin HEAD:main; then
+            echo "CLAIM_OK=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "CLAIM_OK=false" >> "$GITHUB_OUTPUT"
+            echo "Claim push rejected — another run owns today. Skipping post."
+            git reset --hard origin/main
+          fi
+
+      # 2) Post only if we won the claim. X credentials live ONLY here.
       - name: Post today's section
+        if: steps.claim.outputs.CLAIM_OK == 'true'
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
-        run: python bot.py
+        run: python bot.py --post-claimed
 
-      - name: Commit updated state
+      # 3) Record the outcome into the claim + persist state/log. Runs even if the
+      #    post step crashed (if: always()), so the result is recorded. A lost
+      #    push here cannot duplicate — today is already fenced by the claim.
+      - name: Finalize
+        if: always() && steps.claim.outputs.CLAIM_OK == 'true'
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
-          git add state.json post_log.json
-          git diff --cached --quiet || git commit -m "📜 Posted day $(python -c 'import json; print(json.load(open("state.json"))["current_day"] - 1)')"
-          git pull --rebase
-          git push
+          python bot.py --finalize
+          git add state.json post_log.json claims/
+          if git diff --cached --quiet; then
+            echo "Nothing to finalize-commit."
+          else
+            git commit -m "Posted $(date -u +%F)"
+            git pull --rebase && git push
+          fi

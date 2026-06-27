@@ -32,6 +32,9 @@ LOG_FILE = BASE_DIR / "post_log.json"
 IMAGE_MAPPING_FILE = BASE_DIR / "image_mapping.json"
 IMAGES_DIR = BASE_DIR / "images"
 VIDEOS_DIR = BASE_DIR / "video" / "videos"
+# Durable per-UTC-day claim files (committed+pushed BEFORE posting). One file per
+# date so concurrent days never conflict and a same-date claim conflicts cleanly.
+CLAIMS_DIR = BASE_DIR / "claims"
 
 # ---------------------------------------------------------------------------
 # Fallback hashtags — used only if an entry has no "hashtags" field
@@ -97,6 +100,146 @@ def already_posted_today() -> bool:
         if entry_date == today_utc:
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Durable claim (idempotency fence) — see docs/IDEMPOTENCY.md
+#
+# The claim is written and pushed to origin/main BEFORE the irreversible X post.
+# bot.py only reads/writes the claim files; ALL git lives in the workflow. These
+# helpers are pure and exception-tolerant (mirror already_posted_today).
+# ---------------------------------------------------------------------------
+def _today_utc() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def claim_path(date_str: str) -> Path:
+    return CLAIMS_DIR / f"{date_str}.json"
+
+
+def read_claim(date_str: str) -> dict | None:
+    """Return the claim record for a date, or None if missing/corrupt."""
+    p = claim_path(date_str)
+    if not p.exists():
+        return None
+    try:
+        with open(p) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def claim_status(date_str: str) -> str | None:
+    """Status of a date's claim: claimed | posted | posted_partial | failed | None."""
+    claim = read_claim(date_str)
+    return claim.get("status") if claim else None
+
+
+def should_skip_for_claim(status: str | None) -> bool:
+    """
+    True if a date is already consumed and must NOT be posted again.
+
+    'claimed' counts as consumed: once a claim is durably pushed we may have gone
+    on to post, so we never re-attempt (no-duplicate beats no-miss). Only None (no
+    claim) and 'failed' (lead provably never landed) are re-postable.
+    """
+    return status in ("claimed", "posted", "posted_partial")
+
+
+def finalize_status_for_result(result: dict) -> str:
+    """
+    Map a platform post() result to a claim status.
+
+    Coupled to x_twitter's result contract: success=False is returned ONLY when
+    nothing landed (tweet_id is None), so a live-lead partial is never 'failed'.
+    """
+    if result.get("partial"):
+        return "posted_partial"
+    if result.get("success"):
+        return "posted"
+    return "failed"
+
+
+def write_claim(date_str: str, day_num: int, status: str) -> None:
+    """Write/overwrite a claim record (caller commits+pushes it)."""
+    CLAIMS_DIR.mkdir(parents=True, exist_ok=True)
+    record = read_claim(date_str) or {}
+    record.update(
+        {
+            "date": date_str,
+            "day": day_num,
+            "status": status,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "run_id": os.getenv("GITHUB_RUN_ID"),
+        }
+    )
+    record.setdefault("claimed_at", record["updated_at"])
+    with open(claim_path(date_str), "w") as f:
+        json.dump(record, f, indent=2)
+
+
+def run_claim() -> int:
+    """
+    Write a durable 'claimed' record for today if the day is still free. Posts
+    nothing. The workflow commits+pushes the claim to origin/main BEFORE the post
+    step, so any later crash cannot cause a re-post. If today is already
+    claimed/posted, writes nothing (so the workflow stages no change → skips).
+    """
+    date_str = _today_utc()
+    if already_posted_today() or should_skip_for_claim(claim_status(date_str)):
+        print(f"⏭️  {date_str} already claimed/posted — nothing to claim.")
+        return 0
+
+    posts = load_posts()
+    total_days = len(posts)
+    state = load_state()
+    day_num = state["current_day"]
+    if day_num > total_days:
+        day_num = 1
+    if not any(p["day"] == day_num for p in posts):
+        print(f"❌ No post found for day {day_num} — not claiming.")
+        return 1
+
+    write_claim(date_str, day_num, "claimed")
+    print(f"📌 Claimed day {day_num} for {date_str}.")
+    return 0
+
+
+def run_finalize() -> int:
+    """
+    Record today's post outcome into its claim file. Runs with if: always() so it
+    executes even if the post step crashed. Pure file edit; never raises.
+    """
+    date_str = _today_utc()
+    claim = read_claim(date_str)
+    if claim is None:
+        print(f"ℹ️  No claim for {date_str} to finalize.")
+        return 0
+
+    status = "failed"  # no log entry for today => treat as nothing landed
+    if LOG_FILE.exists():
+        try:
+            with open(LOG_FILE) as f:
+                log = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            log = []
+        todays = []
+        for e in log:
+            ts = e.get("timestamp")
+            try:
+                if ts and datetime.fromisoformat(ts).date().isoformat() == date_str:
+                    todays.append(e)
+            except (TypeError, ValueError):
+                continue
+        if todays:
+            status = finalize_status_for_result(todays[-1])
+
+    try:
+        write_claim(date_str, claim.get("day", 0), status)
+        print(f"🏁 Finalized {date_str}: {status}")
+    except OSError as e:
+        print(f"⚠️  Could not finalize claim for {date_str}: {e}")
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -315,11 +458,20 @@ def main():
     parser.add_argument("--reset", action="store_true", help="Reset progress to day 1")
     parser.add_argument("--validate", action="store_true", help="Verify all 77 days have valid image mappings")
     parser.add_argument("--video", action="store_true", help="Attach the pre-rendered video for the day (also enabled by POST_VIDEO env)")
+    parser.add_argument("--claim", action="store_true", help="Durably claim today (write claims/<date>.json) BEFORE posting; posts nothing")
+    parser.add_argument("--post-claimed", action="store_true", help="Post the day pinned by today's claim file")
+    parser.add_argument("--finalize", action="store_true", help="Record the post outcome into today's claim file (run with if: always())")
     args = parser.parse_args()
 
     if args.reset:
         reset_state()
         return
+
+    # Idempotency fence modes (used by the CI workflow). See docs/IDEMPOTENCY.md.
+    if args.claim:
+        sys.exit(run_claim())
+    if args.finalize:
+        sys.exit(run_finalize())
 
     # Idempotency: skip if today's post already succeeded.
     # Exceptions: --preview (informational), --day N (manual override), --validate (meta).
@@ -339,8 +491,14 @@ def main():
         valid = validate_all_mappings(posts, image_mapping)
         sys.exit(0 if valid else 1)
 
-    # Determine which day to post
-    day_num = args.day if args.day else state["current_day"]
+    # Determine which day to post. --post-claimed pins the day from today's claim
+    # file (written + pushed BEFORE this step), so claim and post agree even if
+    # state.json drifts; falls back to state if the claim is missing.
+    if args.post_claimed:
+        claim = read_claim(_today_utc())
+        day_num = (claim or {}).get("day") or state["current_day"]
+    else:
+        day_num = args.day if args.day else state["current_day"]
 
     if day_num > total_days:
         day_num = 1
