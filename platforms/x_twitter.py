@@ -332,7 +332,11 @@ class XTwitterPlatform(BasePlatform):
                 media_category="tweet_video",
                 wait_for_async_finalize=True,
             )
-        except tweepy.TweepyException as e:
+        except Exception as e:
+            # Broad on purpose: tweepy's chunked upload can raise non-TweepyException
+            # errors too (e.g. KeyError if X returns a processing_info without a
+            # "state" key, which its poll loop indexes directly). The contract here
+            # is "never raise — return None so the caller falls back to the image".
             print(f"⚠️  Video upload failed: {_format_error_detail(e)}")
             return None
 
@@ -371,20 +375,65 @@ class XTwitterPlatform(BasePlatform):
                     time.sleep(wait)
         raise last_exc
 
+    def _post_ok(self, url: str, tweet_id, thread_length: int, media_kind: str) -> dict:
+        """Build a fully-successful post result."""
+        return {
+            "success": True,
+            "partial": False,
+            "url": url,
+            "tweet_id": tweet_id,
+            "thread_length": thread_length,
+            "media_kind": media_kind,
+            "error": None,
+        }
+
+    def _post_failed(self, e: Exception, first_id, posted: int, media_kind: str) -> dict:
+        """
+        Build a result after a TweepyException raised during posting.
+
+        If the lead tweet is already live (``first_id`` set), report a PARTIAL
+        success carrying the real tweet_id/url. Reporting a hard failure here
+        would leave bot.py's state un-advanced, so the next scheduled run would
+        re-post the (already public) lead tweet — a duplicate. Advancing on a
+        partial keeps the public timeline clean and records what landed.
+        """
+        detail = _format_error_detail(e)
+        if first_id is not None:
+            url = f"https://x.com/{self._username}/status/{first_id}"
+            print(f"⚠️  Partial post: lead tweet is live but the thread is incomplete: {detail}")
+            return {
+                "success": True,
+                "partial": True,
+                "url": url,
+                "tweet_id": first_id,
+                "thread_length": posted,
+                "media_kind": media_kind,
+                "error": detail,
+            }
+        print(f"❌ X post failed (nothing posted): {detail}")
+        return {
+            "success": False,
+            "partial": False,
+            "url": None,
+            "tweet_id": None,
+            "thread_length": 0,
+            "media_kind": media_kind,
+            "error": detail,
+        }
+
     def _post_text_only(self, text: str, max_len: int = 280) -> dict:
         """Post using text-only flow (existing behavior). Used as fallback."""
         tweets = split_into_thread(text, max_len=max_len)
+        first_id = None
+        posted = 0
+        try:
+            if len(tweets) > 1:
+                print(f"🧵 Posting thread ({len(tweets)} tweets)...")
 
-        if len(tweets) == 1:
-            response = self._create_tweet_with_retry(text=tweets[0])
-            tweet_id = response.data["id"]
-            url = f"https://x.com/{self._username}/status/{tweet_id}"
-            print(f"✅ Posted to X: {url}")
-        else:
-            print(f"🧵 Posting thread ({len(tweets)} tweets)...")
             first_response = self._create_tweet_with_retry(text=tweets[0])
             first_id = first_response.data["id"]
             previous_id = first_id
+            posted = 1
 
             for tweet_text in tweets[1:]:
                 response = self._create_tweet_with_retry(
@@ -392,18 +441,17 @@ class XTwitterPlatform(BasePlatform):
                     in_reply_to_tweet_id=previous_id,
                 )
                 previous_id = response.data["id"]
+                posted += 1
 
-            tweet_id = first_id
             url = f"https://x.com/{self._username}/status/{first_id}"
-            print(f"✅ Posted thread to X: {url}")
-
-        return {
-            "success": True,
-            "url": url,
-            "tweet_id": tweet_id,
-            "thread_length": len(tweets),
-            "error": None,
-        }
+            print(f"✅ Posted to X: {url}")
+            return self._post_ok(url, first_id, posted, media_kind="text")
+        except Exception as e:
+            # Broad on purpose: once the lead tweet is live, even a NON-Tweepy
+            # error (e.g. a 200 response with no "data" → TypeError on
+            # response.data["id"]) must route through _post_failed so a live lead
+            # is recorded as a partial and never re-posted as a duplicate.
+            return self._post_failed(e, first_id, posted, media_kind="text")
 
     def post(
         self,
@@ -428,46 +476,52 @@ class XTwitterPlatform(BasePlatform):
           - Tweet 1 = image_text (or text) + the media
           - body_text is posted as a reply thread below tweet 1
 
+        If the lead tweet posts but a later reply fails, the result is a PARTIAL
+        success (success=True, partial=True) so state advances and the lead is
+        not re-posted on the next run.
+
         Returns:
-            dict with success, url, tweet_id, thread_length, error keys.
+            dict with success, partial, url, tweet_id, thread_length, media_kind,
+            error keys.
         """
         if self._client is None:
             raise RuntimeError("Call authenticate() before posting.")
 
+        # --- Resolve media: prefer video, then image, else text-only ---
+        # (the upload helpers return None on failure and never raise)
+        media_id = None
+        media_kind = None
+
+        if video_path:
+            media_id = self._upload_video(video_path)
+            if media_id is not None:
+                media_kind = "video"
+
+        if media_id is None and image_path:
+            media_id = self._upload_image(image_path)
+            if media_id is not None:
+                media_kind = "image"
+
+        if media_id is None:
+            # No media requested, or every upload failed → text-only.
+            if video_path or image_path:
+                print("⚠️  Falling back to text-only post")
+            return self._post_text_only(text, max_len=reply_char_limit)
+
+        # --- Post the media tweet (tweet 1) + reply thread ---
+        first_id = None
+        posted = 0
         try:
-            # --- Resolve media: prefer video, then image, else text-only ---
-            media_id = None
-            media_kind = None
-
-            if video_path:
-                media_id = self._upload_video(video_path)
-                if media_id is not None:
-                    media_kind = "video"
-
-            if media_id is None and image_path:
-                media_id = self._upload_image(image_path)
-                if media_id is not None:
-                    media_kind = "image"
-
-            if media_id is None:
-                # No media requested, or every upload failed → text-only.
-                if video_path or image_path:
-                    print("⚠️  Falling back to text-only post")
-                return self._post_text_only(text, max_len=reply_char_limit)
-
-            # Post the media tweet (tweet 1)
             caption = image_text or text
             response = self._create_tweet_with_retry(
                 text=caption,
                 media_ids=[media_id],
             )
             first_id = response.data["id"]
+            posted = 1
             url = f"https://x.com/{self._username}/status/{first_id}"
             print(f"✅ Posted {media_kind} tweet to X: {url}")
 
-            thread_count = 1
-
-            # Post body text as reply thread
             if body_text:
                 reply_chunks = split_text_for_replies(body_text, max_len=reply_char_limit)
                 previous_id = first_id
@@ -479,25 +533,12 @@ class XTwitterPlatform(BasePlatform):
                         in_reply_to_tweet_id=previous_id,
                     )
                     previous_id = response.data["id"]
+                    posted += 1
 
-                thread_count += len(reply_chunks)
-                print(f"✅ Reply thread complete ({thread_count} total tweets)")
+                print(f"✅ Reply thread complete ({posted} total tweets)")
 
-            return {
-                "success": True,
-                "url": url,
-                "tweet_id": first_id,
-                "thread_length": thread_count,
-                "error": None,
-            }
-
-        except tweepy.TweepyException as e:
-            detail = _format_error_detail(e)
-            print(f"❌ X post failed: {detail}")
-            return {
-                "success": False,
-                "url": None,
-                "tweet_id": None,
-                "thread_length": 0,
-                "error": detail,
-            }
+            return self._post_ok(url, first_id, posted, media_kind)
+        except Exception as e:
+            # See _post_text_only: broaden so a non-Tweepy raise after the lead
+            # is live still becomes a partial (no duplicate), not an uncaught crash.
+            return self._post_failed(e, first_id, posted, media_kind)

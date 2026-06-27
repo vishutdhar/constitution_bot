@@ -64,3 +64,13 @@ Local/manual `--video` runs work today because the files exist on disk.
 
 Bluesky video is out of scope here (Bluesky is not on `main`, and its video
 limits are tighter). X video first; revisit Bluesky separately.
+
+### ⚠️ When merging the Bluesky branch
+
+`base.py`'s `post()` gained a `video_path` parameter. The unmerged Bluesky
+branch's `BlueskyPlatform.post()` does **not** have it, and `git` auto-merges
+the two with no conflict — so a naive merge would `TypeError` the moment a
+video run reached Bluesky. `bot.py` now only passes `video_path` when it is
+set (so the default image path is merge-safe), but before enabling `POST_VIDEO`
+with Bluesky present, add `video_path: str | None = None` to
+`BlueskyPlatform.post()` (it can ignore it — Bluesky video is not implemented).
