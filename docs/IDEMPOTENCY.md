@@ -26,15 +26,24 @@ Statuses (finalized from the post result):
 - `posted` — lead + full thread succeeded.
 - `posted_partial` — lead live, thread incomplete.
 - `posted_unknown` — **ambiguous**: the lead create returned a 2xx with no tweet
-  id (may be live), OR the post step ran but left no outcome record.
-- `failed` — the lead create returned a **non-2xx** (the tweet was never created).
+  id, OR errored with a 5xx/429 (may have committed), OR the post step ran but
+  left no outcome record. May be live → never re-posted.
+- `failed` — the lead create returned a **4xx client error** (BadRequest /
+  Unauthorized / Forbidden / NotFound) → the tweet was provably NOT created.
 - `unknown` — the claim file is present but corrupt/unreadable.
 
 `should_skip_for_claim()` treats `claimed | posted | posted_partial |
 posted_unknown | unknown` as **consumed** (never re-post). Only `None` (no claim)
-and `failed` (lead provably never landed → safe to retry) are re-postable.
-Treating every ambiguous case as consumed means **no-duplicate beats no-miss**:
-the worst case is a rare *missed* day, never a duplicate public post.
+and `failed` (4xx → provably never created) are re-postable. Treating every
+ambiguous case as consumed means **no-duplicate beats no-miss**: the worst case
+is a rare *missed* day, never a duplicate public post.
+
+**The lead create is never auto-retried.** X's `create_tweet` is non-idempotent
+(no idempotency key), so a retry after a 5xx/429 that arrived *after* a
+server-side commit would post a duplicate *within one run* — which the cross-run
+claim fence cannot prevent. Only a 4xx (provably-not-created) is retryable, and
+only at the day level via the next cron window. Replies are likewise not retried
+(a reply error → `posted_partial`).
 
 **Date pinning:** the claim step computes one UTC date and passes it as `--date`
 to the post and finalize steps, so a midnight-UTC flip can't make them disagree.

@@ -18,7 +18,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tweepy  # noqa: E402
-import platforms.x_twitter as xmod  # noqa: E402
 from platforms.x_twitter import XTwitterPlatform  # noqa: E402
 
 
@@ -69,9 +68,9 @@ class FakeClient:
     NOT raise on, so `response.data["id"]` then raises a non-Tweepy TypeError.
     """
 
-    def __init__(self, fail_lead=False, fail_replies=False, none_lead=False, none_replies=False):
-        self.fail_lead = fail_lead
-        self.fail_replies = fail_replies
+    def __init__(self, lead_exc=None, reply_exc=None, none_lead=False, none_replies=False):
+        self.lead_exc = lead_exc      # exception instance to raise on the lead create
+        self.reply_exc = reply_exc    # exception instance to raise on a reply create
         self.none_lead = none_lead
         self.none_replies = none_replies
         self.n = 0
@@ -79,11 +78,18 @@ class FakeClient:
     def create_tweet(self, **kwargs):
         self.n += 1
         is_reply = kwargs.get("in_reply_to_tweet_id") is not None
-        if (is_reply and self.fail_replies) or (not is_reply and self.fail_lead):
-            raise tweepy.TweepyException("simulated failure")
+        if is_reply and self.reply_exc is not None:
+            raise self.reply_exc
+        if (not is_reply) and self.lead_exc is not None:
+            raise self.lead_exc
         if (is_reply and self.none_replies) or (not is_reply and self.none_lead):
             return type("R", (), {"data": None})()  # 200 with no data
         return type("R", (), {"data": {"id": f"id{self.n}"}})()
+
+
+def _exc(cls):
+    """Build a tweepy HTTP exception instance without its Response-parsing __init__."""
+    return cls.__new__(cls)
 
 
 def _post(client, **post_kwargs):
@@ -103,24 +109,34 @@ def test_post(failures):
     if not (r["success"] and not r["partial"] and r["media_kind"] == "image" and r["thread_length"] > 1):
         failures.append(f"post_full_success: {r}")
 
-    # Lead posts, a reply fails -> PARTIAL success (state should advance).
-    r = _post(FakeClient(fail_replies=True), body_text=body, reply_char_limit=280)
+    # Lead posts, a reply errors -> PARTIAL success (state should advance).
+    r = _post(FakeClient(reply_exc=_exc(tweepy.TwitterServerError)), body_text=body, reply_char_limit=280)
     if not (r["success"] and r["partial"] and r["tweet_id"] is not None and r["media_kind"] == "image"):
         failures.append(f"post_partial: {r}")
 
-    # Lead itself fails -> hard failure, nothing posted.
-    r = _post(FakeClient(fail_lead=True), body_text=body, reply_char_limit=280)
+    # Lead returns a 4xx (BadRequest) -> the tweet was NOT created -> hard failure
+    # (retryable next window), nothing posted.
+    r = _post(FakeClient(lead_exc=_exc(tweepy.BadRequest)), body_text=body, reply_char_limit=280)
     if not (r["success"] is False and r["partial"] is False and r["tweet_id"] is None):
-        failures.append(f"post_lead_failure: {r}")
+        failures.append(f"post_lead_4xx_failed: {r}")
 
-    # Lead live, but a reply returns 200-with-no-data (TypeError on id, a
-    # NON-Tweepy error) -> must still be a PARTIAL, not an uncaught crash.
+    # Lead returns a 5xx (TwitterServerError) -> AMBIGUOUS (may have committed) ->
+    # uncertain (consumed), NEVER retried -> no duplicate.
+    r = _post(FakeClient(lead_exc=_exc(tweepy.TwitterServerError)), body_text=body, reply_char_limit=280)
+    if not (r["success"] is True and r.get("uncertain") is True and r["tweet_id"] is None):
+        failures.append(f"post_lead_5xx_uncertain: {r}")
+
+    # Lead 429 (TooManyRequests) -> also ambiguous -> uncertain (not retried).
+    r = _post(FakeClient(lead_exc=_exc(tweepy.TooManyRequests)), body_text=body, reply_char_limit=280)
+    if not (r["success"] is True and r.get("uncertain") is True):
+        failures.append(f"post_lead_429_uncertain: {r}")
+
+    # Lead live, but a reply returns 200-with-no-data -> still a PARTIAL, no crash.
     r = _post(FakeClient(none_replies=True), body_text=body, reply_char_limit=280)
     if not (r["success"] and r["partial"] and r["tweet_id"] is not None):
         failures.append(f"post_partial_nondata_reply: {r}")
 
-    # Lead returns 200-with-no-data -> AMBIGUOUS: uncertain (consumed, NOT a
-    # retryable failure) so the idempotency layer never re-posts a maybe-live lead.
+    # Lead returns 200-with-no-data -> AMBIGUOUS: uncertain (consumed).
     r = _post(FakeClient(none_lead=True), body_text=body, reply_char_limit=280)
     if not (r["success"] is True and r.get("uncertain") is True and r["tweet_id"] is None):
         failures.append(f"post_lead_nondata: {r}")
@@ -145,13 +161,8 @@ def main():
     if platform._upload_video("/fake.mp4") is not None:
         failures.append("api_none: expected None")
 
-    # --- post() partial-success handling (no real sleeps during retries) ---
-    orig_sleep = xmod.time.sleep
-    xmod.time.sleep = lambda *a, **k: None
-    try:
-        test_post(failures)
-    finally:
-        xmod.time.sleep = orig_sleep
+    # --- post() outcome classification (lead 4xx/5xx/429/2xx-no-id, partial replies) ---
+    test_post(failures)
 
     if failures:
         print("FAILED:")

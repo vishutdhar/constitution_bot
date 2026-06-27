@@ -416,6 +416,7 @@ def log_post(entry: dict, result: dict, platform: str) -> None:
             "platform": platform,
             "success": result["success"],
             "partial": result.get("partial", False),
+            "uncertain": result.get("uncertain", False),
             "media_kind": result.get("media_kind"),
             "url": result.get("url"),
             "error": result.get("error"),

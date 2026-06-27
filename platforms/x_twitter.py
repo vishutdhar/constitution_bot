@@ -4,10 +4,14 @@ Automatically threads posts that exceed 280 characters.
 Supports image uploads via the v1.1 API.
 """
 
-import time
-
 import tweepy
 from platforms.base import BasePlatform
+
+# 4xx client errors mean X rejected the create => the tweet was NOT created, so the
+# day is safely retryable. Any OTHER error (5xx, 429, network, or a 2xx with no id)
+# is AMBIGUOUS — the non-idempotent create may have committed — so it must NEVER be
+# retried and is treated as 'uncertain' (consumed), not 'failed' (retryable).
+_LEAD_NOT_CREATED = (tweepy.BadRequest, tweepy.Unauthorized, tweepy.Forbidden, tweepy.NotFound)
 
 
 def weighted_len(text: str) -> int:
@@ -357,23 +361,10 @@ class XTwitterPlatform(BasePlatform):
         print(f"✅ Video uploaded (media_id: {media_id})")
         return str(media_id)
 
-    def _create_tweet_with_retry(self, retries: int = 2, **kwargs) -> tweepy.Response:
-        """
-        Wrapper around create_tweet with per-tweet retry.
-        Retries on transient failures so a partial thread doesn't trigger
-        a full script-level re-run (which would duplicate already-posted tweets).
-        """
-        last_exc = None
-        for attempt in range(1 + retries):
-            try:
-                return self._client.create_tweet(**kwargs)
-            except tweepy.TweepyException as e:
-                last_exc = e
-                if attempt < retries:
-                    wait = 5 * (attempt + 1)
-                    print(f"⚠️  Tweet failed (attempt {attempt + 1}), retrying in {wait}s: {_format_error_detail(e)}")
-                    time.sleep(wait)
-        raise last_exc
+    # NOTE: create_tweet is deliberately NEVER auto-retried. The X create is
+    # non-idempotent (no idempotency key), so retrying after a 5xx/429 that arrived
+    # AFTER a server-side commit would post a duplicate. The 3 daily cron windows
+    # are the only "retry", and only for a provably-not-created ('failed') day.
 
     def _post_ok(self, url: str, tweet_id, thread_length: int, media_kind: str) -> dict:
         """Build a fully-successful post result."""
@@ -446,12 +437,14 @@ class XTwitterPlatform(BasePlatform):
         if len(tweets) > 1:
             print(f"🧵 Posting thread ({len(tweets)} tweets)...")
 
-        # Lead tweet. A TweepyException here = non-2xx = the tweet was NOT created
-        # => safe, retryable failure (no public post, no duplicate risk).
+        # Lead tweet (single attempt — never retried; the create is non-idempotent).
         try:
-            first_response = self._create_tweet_with_retry(text=tweets[0])
+            first_response = self._client.create_tweet(text=tweets[0])
         except tweepy.TweepyException as e:
-            return self._post_failed(e, None, 0, media_kind="text")
+            if isinstance(e, _LEAD_NOT_CREATED):
+                return self._post_failed(e, None, 0, media_kind="text")  # 4xx: not created -> retryable
+            # 5xx / 429 / other: may have committed -> uncertain, never retry.
+            return self._post_uncertain("text", f"text lead errored ambiguously ({_format_error_detail(e)})")
 
         # 2xx but no id => ambiguous (may have posted) => uncertain, do NOT retry.
         first_id = (first_response.data or {}).get("id")
@@ -463,7 +456,7 @@ class XTwitterPlatform(BasePlatform):
         posted = 1
         try:
             for tweet_text in tweets[1:]:
-                response = self._create_tweet_with_retry(text=tweet_text, in_reply_to_tweet_id=previous_id)
+                response = self._client.create_tweet(text=tweet_text, in_reply_to_tweet_id=previous_id)
                 rid = (response.data or {}).get("id")
                 if rid is None:
                     return self._post_failed(RuntimeError("reply returned 2xx with no id"), first_id, posted, "text")
@@ -534,11 +527,14 @@ class XTwitterPlatform(BasePlatform):
         # --- Post the media tweet (tweet 1) + reply thread ---
         caption = image_text or text
 
-        # Lead tweet. A TweepyException = non-2xx = NOT created => retryable.
+        # Lead tweet (single attempt — never retried; the create is non-idempotent).
         try:
-            response = self._create_tweet_with_retry(text=caption, media_ids=[media_id])
+            response = self._client.create_tweet(text=caption, media_ids=[media_id])
         except tweepy.TweepyException as e:
-            return self._post_failed(e, None, 0, media_kind)
+            if isinstance(e, _LEAD_NOT_CREATED):
+                return self._post_failed(e, None, 0, media_kind)  # 4xx: not created -> retryable
+            # 5xx / 429 / other: may have committed -> uncertain, never retry.
+            return self._post_uncertain(media_kind, f"media lead errored ambiguously ({_format_error_detail(e)})")
 
         # 2xx but no id => ambiguous (may have posted) => uncertain, do NOT retry.
         first_id = (response.data or {}).get("id")
@@ -556,7 +552,7 @@ class XTwitterPlatform(BasePlatform):
 
                 print(f"🧵 Posting reply thread ({len(reply_chunks)} replies)...")
                 for chunk in reply_chunks:
-                    response = self._create_tweet_with_retry(text=chunk, in_reply_to_tweet_id=previous_id)
+                    response = self._client.create_tweet(text=chunk, in_reply_to_tweet_id=previous_id)
                     rid = (response.data or {}).get("id")
                     if rid is None:
                         return self._post_failed(RuntimeError("reply returned 2xx with no id"), first_id, posted, media_kind)

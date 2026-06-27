@@ -129,6 +129,16 @@ def main():
         bot.run_finalize(today())
         check("finalize_noclaim_noop", bot.read_claim(today()) is None)
 
+    # End-to-end: an UNCERTAIN result through the real log_post -> run_finalize
+    # path must finalize as 'posted_unknown' (regression: the 'uncertain' key must
+    # survive log serialization, else it collapses to 'posted_partial').
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=5)
+        bot.write_claim(today(), 5, "claimed")
+        bot.log_post({"day": 5, "section": "S5"}, p._post_uncertain("image", "no id"), "X")
+        bot.run_finalize(today())
+        check("finalize_uncertain_roundtrip", bot.claim_status(today()) == "posted_unknown")
+
     if failures:
         print("FAILED:")
         for f in failures:
