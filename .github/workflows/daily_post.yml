@@ -51,14 +51,18 @@ jobs:
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
-          python bot.py --claim
+          # Pin ONE UTC date for the whole job so claim/post/finalize agree even
+          # across a midnight flip, and pass it to the later steps.
+          CLAIM_DATE="$(date -u +%F)"
+          echo "CLAIM_DATE=$CLAIM_DATE" >> "$GITHUB_OUTPUT"
+          python bot.py --claim --date "$CLAIM_DATE"
           git add claims/
           if git diff --cached --quiet; then
             echo "CLAIM_OK=false" >> "$GITHUB_OUTPUT"
             echo "Already claimed/posted today — skipping post."
             exit 0
           fi
-          git commit -m "Claim $(date -u +%F)"
+          git commit -m "Claim $CLAIM_DATE"
           # Fast-forward push ONLY. Do NOT add 'git pull --rebase' here: the push
           # IS the mutex. If another window already claimed today, this push is
           # rejected (non-fast-forward) and we must not post. Rebasing would let a
@@ -71,7 +75,8 @@ jobs:
             git reset --hard origin/main
           fi
 
-      # 2) Post only if we won the claim. X credentials live ONLY here.
+      # 2) Post only if we won the claim. X credentials live ONLY here. --date is
+      #    pinned from the claim step so post targets the exact claimed date.
       - name: Post today's section
         if: steps.claim.outputs.CLAIM_OK == 'true'
         env:
@@ -79,21 +84,24 @@ jobs:
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
-        run: python bot.py --post-claimed
+          CLAIM_DATE: ${{ steps.claim.outputs.CLAIM_DATE }}
+        run: python bot.py --post-claimed --date "$CLAIM_DATE"
 
       # 3) Record the outcome into the claim + persist state/log. Runs even if the
       #    post step crashed (if: always()), so the result is recorded. A lost
       #    push here cannot duplicate — today is already fenced by the claim.
       - name: Finalize
         if: always() && steps.claim.outputs.CLAIM_OK == 'true'
+        env:
+          CLAIM_DATE: ${{ steps.claim.outputs.CLAIM_DATE }}
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
-          python bot.py --finalize
+          python bot.py --finalize --date "$CLAIM_DATE"
           git add state.json post_log.json claims/
           if git diff --cached --quiet; then
             echo "Nothing to finalize-commit."
           else
-            git commit -m "Posted $(date -u +%F)"
+            git commit -m "Posted $CLAIM_DATE"
             git pull --rebase && git push
           fi

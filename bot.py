@@ -130,29 +130,49 @@ def read_claim(date_str: str) -> dict | None:
 
 
 def claim_status(date_str: str) -> str | None:
-    """Status of a date's claim: claimed | posted | posted_partial | failed | None."""
-    claim = read_claim(date_str)
-    return claim.get("status") if claim else None
+    """
+    Status of a date's claim: claimed | posted | posted_partial | posted_unknown |
+    failed | unknown | None.
+
+    Distinguishes a MISSING claim (None, re-postable) from a PRESENT-but-corrupt
+    one ('unknown', treated as consumed) so a damaged claim never re-opens a day.
+    """
+    p = claim_path(date_str)
+    if not p.exists():
+        return None
+    try:
+        with open(p) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return "unknown"  # present but unreadable -> fail-safe to consumed
+    status = data.get("status")
+    return status if status else "unknown"
 
 
 def should_skip_for_claim(status: str | None) -> bool:
     """
     True if a date is already consumed and must NOT be posted again.
 
-    'claimed' counts as consumed: once a claim is durably pushed we may have gone
-    on to post, so we never re-attempt (no-duplicate beats no-miss). Only None (no
-    claim) and 'failed' (lead provably never landed) are re-postable.
+    Consumed: claimed (intent durable; we may have posted), posted, posted_partial,
+    posted_unknown (ambiguous lead, may be live), and unknown (corrupt claim — fail
+    safe). Only None (no claim) and 'failed' (lead provably never landed) are
+    re-postable. No-duplicate beats no-miss.
     """
-    return status in ("claimed", "posted", "posted_partial")
+    return status in ("claimed", "posted", "posted_partial", "posted_unknown", "unknown")
 
 
 def finalize_status_for_result(result: dict) -> str:
     """
     Map a platform post() result to a claim status.
 
-    Coupled to x_twitter's result contract: success=False is returned ONLY when
-    nothing landed (tweet_id is None), so a live-lead partial is never 'failed'.
+    Coupled to x_twitter's result contract:
+      - uncertain (2xx lead, no id, may be live) -> posted_unknown (NOT retryable)
+      - partial (lead live, thread incomplete)   -> posted_partial
+      - success                                  -> posted
+      - else (non-2xx lead, nothing landed)      -> failed (retryable)
     """
+    if result.get("uncertain"):
+        return "posted_unknown"
     if result.get("partial"):
         return "posted_partial"
     if result.get("success"):
@@ -178,14 +198,13 @@ def write_claim(date_str: str, day_num: int, status: str) -> None:
         json.dump(record, f, indent=2)
 
 
-def run_claim() -> int:
+def run_claim(date_str: str) -> int:
     """
-    Write a durable 'claimed' record for today if the day is still free. Posts
+    Write a durable 'claimed' record for date_str if the day is still free. Posts
     nothing. The workflow commits+pushes the claim to origin/main BEFORE the post
     step, so any later crash cannot cause a re-post. If today is already
     claimed/posted, writes nothing (so the workflow stages no change → skips).
     """
-    date_str = _today_utc()
     if already_posted_today() or should_skip_for_claim(claim_status(date_str)):
         print(f"⏭️  {date_str} already claimed/posted — nothing to claim.")
         return 0
@@ -205,18 +224,21 @@ def run_claim() -> int:
     return 0
 
 
-def run_finalize() -> int:
+def run_finalize(date_str: str) -> int:
     """
-    Record today's post outcome into its claim file. Runs with if: always() so it
-    executes even if the post step crashed. Pure file edit; never raises.
+    Record date_str's post outcome into its claim file. Runs with if: always() so
+    it executes even if the post step crashed. Pure file edit; never raises.
     """
-    date_str = _today_utc()
     claim = read_claim(date_str)
     if claim is None:
         print(f"ℹ️  No claim for {date_str} to finalize.")
         return 0
 
-    status = "failed"  # no log entry for today => treat as nothing landed
+    # Default to 'posted_unknown' (consumed, NOT retryable): we won the claim and
+    # the post step ran, but left no outcome record (crash / log-write failure),
+    # so we cannot prove nothing posted — never re-post. Only an explicit logged
+    # result downgrades this (a non-2xx lead failure -> 'failed' -> retryable).
+    status = "posted_unknown"
     if LOG_FILE.exists():
         try:
             with open(LOG_FILE) as f:
@@ -458,20 +480,25 @@ def main():
     parser.add_argument("--reset", action="store_true", help="Reset progress to day 1")
     parser.add_argument("--validate", action="store_true", help="Verify all 77 days have valid image mappings")
     parser.add_argument("--video", action="store_true", help="Attach the pre-rendered video for the day (also enabled by POST_VIDEO env)")
-    parser.add_argument("--claim", action="store_true", help="Durably claim today (write claims/<date>.json) BEFORE posting; posts nothing")
-    parser.add_argument("--post-claimed", action="store_true", help="Post the day pinned by today's claim file")
-    parser.add_argument("--finalize", action="store_true", help="Record the post outcome into today's claim file (run with if: always())")
+    parser.add_argument("--claim", action="store_true", help="Durably claim the date (write claims/<date>.json) BEFORE posting; posts nothing")
+    parser.add_argument("--post-claimed", action="store_true", help="Post the day pinned by the claim file for --date")
+    parser.add_argument("--finalize", action="store_true", help="Record the post outcome into the claim file for --date (run with if: always())")
+    parser.add_argument("--date", type=str, help="UTC date (YYYY-MM-DD) the claim modes operate on; defaults to today. Pinned across claim/post/finalize.")
     args = parser.parse_args()
 
     if args.reset:
         reset_state()
         return
 
+    # The claim/post/finalize trio must agree on ONE date even across a midnight
+    # UTC flip, so the workflow pins --date from the claim step.
+    claim_date = args.date or _today_utc()
+
     # Idempotency fence modes (used by the CI workflow). See docs/IDEMPOTENCY.md.
     if args.claim:
-        sys.exit(run_claim())
+        sys.exit(run_claim(claim_date))
     if args.finalize:
-        sys.exit(run_finalize())
+        sys.exit(run_finalize(claim_date))
 
     # Idempotency: skip if today's post already succeeded.
     # Exceptions: --preview (informational), --day N (manual override), --validate (meta).
@@ -491,12 +518,15 @@ def main():
         valid = validate_all_mappings(posts, image_mapping)
         sys.exit(0 if valid else 1)
 
-    # Determine which day to post. --post-claimed pins the day from today's claim
-    # file (written + pushed BEFORE this step), so claim and post agree even if
-    # state.json drifts; falls back to state if the claim is missing.
+    # Determine which day to post. --post-claimed pins the day from the claim file
+    # for claim_date (written + pushed BEFORE this step). Fail-closed: only post
+    # when a live 'claimed' record exists — never fall back to state, since posting
+    # without the durable fence is exactly what risks a duplicate.
     if args.post_claimed:
-        claim = read_claim(_today_utc())
-        day_num = (claim or {}).get("day") or state["current_day"]
+        if claim_status(claim_date) != "claimed":
+            print(f"❌ No live claim (status 'claimed') for {claim_date} — refusing to post.")
+            sys.exit(1)
+        day_num = read_claim(claim_date)["day"]
     else:
         day_num = args.day if args.day else state["current_day"]
 

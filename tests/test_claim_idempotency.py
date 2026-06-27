@@ -56,9 +56,11 @@ def main():
     res_ok = p._post_ok("url", "id1", 3, "image")
     res_hard = p._post_failed(tweepy.TweepyException("x"), None, 0, "image")     # nothing landed
     res_partial = p._post_failed(tweepy.TweepyException("x"), "id1", 1, "image")  # lead live
+    res_uncertain = p._post_uncertain("image", "lead 2xx, no id")               # ambiguous lead
     check("fin_posted", bot.finalize_status_for_result(res_ok) == "posted")
     check("fin_partial", bot.finalize_status_for_result(res_partial) == "posted_partial")
     check("fin_failed", bot.finalize_status_for_result(res_hard) == "failed")
+    check("fin_uncertain", bot.finalize_status_for_result(res_uncertain) == "posted_unknown")
 
     # should_skip_for_claim truth table.
     check("skip_none", bot.should_skip_for_claim(None) is False)
@@ -66,6 +68,8 @@ def main():
     check("skip_claimed", bot.should_skip_for_claim("claimed") is True)
     check("skip_posted", bot.should_skip_for_claim("posted") is True)
     check("skip_partial", bot.should_skip_for_claim("posted_partial") is True)
+    check("skip_posted_unknown", bot.should_skip_for_claim("posted_unknown") is True)
+    check("skip_unknown", bot.should_skip_for_claim("unknown") is True)
 
     # claim_status tolerant of missing/corrupt.
     with tempfile.TemporaryDirectory() as tmp:
@@ -73,54 +77,56 @@ def main():
         check("status_missing", bot.claim_status(today()) is None)
         bot.CLAIMS_DIR.mkdir(parents=True, exist_ok=True)
         bot.claim_path(today()).write_text("{not json")
-        check("status_corrupt", bot.claim_status(today()) is None)
+        check("status_corrupt", bot.claim_status(today()) == "unknown")
 
     # run_claim on a free day writes a 'claimed' record pinned to state day.
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5)
-        check("claim_rc", bot.run_claim() == 0)
+        check("claim_rc", bot.run_claim(today()) == 0)
         c = bot.read_claim(today())
         check("claim_written", c is not None and c["status"] == "claimed" and c["day"] == 5)
         # Re-running must not change an existing claim (idempotent).
         before = bot.claim_path(today()).read_text()
-        bot.run_claim()
+        bot.run_claim(today())
         check("claim_idempotent", bot.claim_path(today()).read_text() == before)
 
     # A 'failed' claim is re-claimable (lead provably never landed).
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5)
         bot.write_claim(today(), 5, "failed")
-        bot.run_claim()
+        bot.run_claim(today())
         check("claim_retry_after_failed", bot.claim_status(today()) == "claimed")
 
     # already_posted_today (legacy log) blocks claiming.
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5, log=[{"timestamp": now_iso(), "success": True, "day": 5}])
-        bot.run_claim()
+        bot.run_claim(today())
         check("claim_skip_when_posted", bot.read_claim(today()) is None)
 
     # finalize maps the day's last log entry to a claim status.
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5, log=[{"timestamp": now_iso(), "success": True, "partial": True, "day": 5}])
         bot.write_claim(today(), 5, "claimed")
-        bot.run_finalize()
+        bot.run_finalize(today())
         check("finalize_partial", bot.claim_status(today()) == "posted_partial")
 
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5, log=[{"timestamp": now_iso(), "success": False, "partial": False, "day": 5}])
         bot.write_claim(today(), 5, "claimed")
-        bot.run_finalize()
+        bot.run_finalize(today())
         check("finalize_hard_failed", bot.claim_status(today()) == "failed")
 
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5)  # no log at all
         bot.write_claim(today(), 5, "claimed")
-        bot.run_finalize()
-        check("finalize_nolog_failed", bot.claim_status(today()) == "failed")
+        bot.run_finalize(today())
+        # No outcome record but the claim was won => consumed (not retryable),
+        # NOT 'failed' (which would re-open the day and risk a duplicate).
+        check("finalize_nolog_unknown", bot.claim_status(today()) == "posted_unknown")
 
     with tempfile.TemporaryDirectory() as tmp:
         setup_tmp(tmp, state_day=5)  # no claim
-        bot.run_finalize()
+        bot.run_finalize(today())
         check("finalize_noclaim_noop", bot.read_claim(today()) is None)
 
     if failures:

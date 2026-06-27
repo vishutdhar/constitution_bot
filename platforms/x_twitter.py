@@ -387,15 +387,34 @@ class XTwitterPlatform(BasePlatform):
             "error": None,
         }
 
+    def _post_uncertain(self, media_kind: str, detail: str) -> dict:
+        """
+        Build a result for an AMBIGUOUS lead: a 2xx response carrying no tweet id,
+        so the tweet may or may not be public. We must NOT retry (that risks a
+        duplicate), so report a non-retryable, human-flagged outcome (uncertain).
+        bot.py advances state on this; finalize records it as 'posted_unknown'.
+        """
+        print(f"⚠️  Uncertain post: lead create returned no id ({detail}). Not retrying (may be live).")
+        return {
+            "success": True,
+            "partial": True,
+            "uncertain": True,
+            "url": None,
+            "tweet_id": None,
+            "thread_length": 0,
+            "media_kind": media_kind,
+            "error": detail,
+        }
+
     def _post_failed(self, e: Exception, first_id, posted: int, media_kind: str) -> dict:
         """
-        Build a result after a TweepyException raised during posting.
+        Build a result after an error raised during posting.
 
         If the lead tweet is already live (``first_id`` set), report a PARTIAL
-        success carrying the real tweet_id/url. Reporting a hard failure here
-        would leave bot.py's state un-advanced, so the next scheduled run would
-        re-post the (already public) lead tweet — a duplicate. Advancing on a
-        partial keeps the public timeline clean and records what landed.
+        success carrying the real tweet_id/url, so state advances and the live
+        lead is never re-posted as a duplicate. If ``first_id`` is None this is
+        only reached for a non-2xx lead failure (the tweet was NOT created), so a
+        hard failure is correct and the day is safely retryable.
         """
         detail = _format_error_detail(e)
         if first_id is not None:
@@ -424,33 +443,37 @@ class XTwitterPlatform(BasePlatform):
     def _post_text_only(self, text: str, max_len: int = 280) -> dict:
         """Post using text-only flow (existing behavior). Used as fallback."""
         tweets = split_into_thread(text, max_len=max_len)
-        first_id = None
-        posted = 0
+        if len(tweets) > 1:
+            print(f"🧵 Posting thread ({len(tweets)} tweets)...")
+
+        # Lead tweet. A TweepyException here = non-2xx = the tweet was NOT created
+        # => safe, retryable failure (no public post, no duplicate risk).
         try:
-            if len(tweets) > 1:
-                print(f"🧵 Posting thread ({len(tweets)} tweets)...")
-
             first_response = self._create_tweet_with_retry(text=tweets[0])
-            first_id = first_response.data["id"]
-            previous_id = first_id
-            posted = 1
+        except tweepy.TweepyException as e:
+            return self._post_failed(e, None, 0, media_kind="text")
 
+        # 2xx but no id => ambiguous (may have posted) => uncertain, do NOT retry.
+        first_id = (first_response.data or {}).get("id")
+        if first_id is None:
+            return self._post_uncertain("text", "text lead returned 2xx with no id")
+
+        # Lead is live. Any failure from here is a PARTIAL (never re-posted).
+        previous_id = first_id
+        posted = 1
+        try:
             for tweet_text in tweets[1:]:
-                response = self._create_tweet_with_retry(
-                    text=tweet_text,
-                    in_reply_to_tweet_id=previous_id,
-                )
-                previous_id = response.data["id"]
+                response = self._create_tweet_with_retry(text=tweet_text, in_reply_to_tweet_id=previous_id)
+                rid = (response.data or {}).get("id")
+                if rid is None:
+                    return self._post_failed(RuntimeError("reply returned 2xx with no id"), first_id, posted, "text")
+                previous_id = rid
                 posted += 1
 
             url = f"https://x.com/{self._username}/status/{first_id}"
             print(f"✅ Posted to X: {url}")
             return self._post_ok(url, first_id, posted, media_kind="text")
         except Exception as e:
-            # Broad on purpose: once the lead tweet is live, even a NON-Tweepy
-            # error (e.g. a 200 response with no "data" → TypeError on
-            # response.data["id"]) must route through _post_failed so a live lead
-            # is recorded as a partial and never re-posted as a duplicate.
             return self._post_failed(e, first_id, posted, media_kind="text")
 
     def post(
@@ -509,36 +532,39 @@ class XTwitterPlatform(BasePlatform):
             return self._post_text_only(text, max_len=reply_char_limit)
 
         # --- Post the media tweet (tweet 1) + reply thread ---
-        first_id = None
-        posted = 0
-        try:
-            caption = image_text or text
-            response = self._create_tweet_with_retry(
-                text=caption,
-                media_ids=[media_id],
-            )
-            first_id = response.data["id"]
-            posted = 1
-            url = f"https://x.com/{self._username}/status/{first_id}"
-            print(f"✅ Posted {media_kind} tweet to X: {url}")
+        caption = image_text or text
 
+        # Lead tweet. A TweepyException = non-2xx = NOT created => retryable.
+        try:
+            response = self._create_tweet_with_retry(text=caption, media_ids=[media_id])
+        except tweepy.TweepyException as e:
+            return self._post_failed(e, None, 0, media_kind)
+
+        # 2xx but no id => ambiguous (may have posted) => uncertain, do NOT retry.
+        first_id = (response.data or {}).get("id")
+        if first_id is None:
+            return self._post_uncertain(media_kind, "media lead returned 2xx with no id")
+
+        # Lead is live. Any failure from here is a PARTIAL (never re-posted).
+        posted = 1
+        url = f"https://x.com/{self._username}/status/{first_id}"
+        print(f"✅ Posted {media_kind} tweet to X: {url}")
+        try:
             if body_text:
                 reply_chunks = split_text_for_replies(body_text, max_len=reply_char_limit)
                 previous_id = first_id
 
                 print(f"🧵 Posting reply thread ({len(reply_chunks)} replies)...")
                 for chunk in reply_chunks:
-                    response = self._create_tweet_with_retry(
-                        text=chunk,
-                        in_reply_to_tweet_id=previous_id,
-                    )
-                    previous_id = response.data["id"]
+                    response = self._create_tweet_with_retry(text=chunk, in_reply_to_tweet_id=previous_id)
+                    rid = (response.data or {}).get("id")
+                    if rid is None:
+                        return self._post_failed(RuntimeError("reply returned 2xx with no id"), first_id, posted, media_kind)
+                    previous_id = rid
                     posted += 1
 
                 print(f"✅ Reply thread complete ({posted} total tweets)")
 
             return self._post_ok(url, first_id, posted, media_kind)
         except Exception as e:
-            # See _post_text_only: broaden so a non-Tweepy raise after the lead
-            # is live still becomes a partial (no duplicate), not an uncaught crash.
             return self._post_failed(e, first_id, posted, media_kind)

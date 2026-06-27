@@ -119,9 +119,10 @@ def test_post(failures):
     if not (r["success"] and r["partial"] and r["tweet_id"] is not None):
         failures.append(f"post_partial_nondata_reply: {r}")
 
-    # Lead returns 200-with-no-data -> hard failure, no crash (first_id never set).
+    # Lead returns 200-with-no-data -> AMBIGUOUS: uncertain (consumed, NOT a
+    # retryable failure) so the idempotency layer never re-posts a maybe-live lead.
     r = _post(FakeClient(none_lead=True), body_text=body, reply_char_limit=280)
-    if not (r["success"] is False and r["partial"] is False and r["tweet_id"] is None):
+    if not (r["success"] is True and r.get("uncertain") is True and r["tweet_id"] is None):
         failures.append(f"post_lead_nondata: {r}")
 
 

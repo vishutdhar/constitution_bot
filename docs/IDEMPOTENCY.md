@@ -21,13 +21,25 @@ claims/2026-06-27.json
   "claimed_at": "...", "updated_at": "...", "run_id": "..." }
 ```
 
-Statuses: `claimed` (intent recorded, may or may not have posted) → `posted` /
-`posted_partial` (finalized) ; or `failed` (the lead tweet provably never landed).
+Statuses (finalized from the post result):
+- `claimed` — intent recorded; may or may not have posted (crash before finalize).
+- `posted` — lead + full thread succeeded.
+- `posted_partial` — lead live, thread incomplete.
+- `posted_unknown` — **ambiguous**: the lead create returned a 2xx with no tweet
+  id (may be live), OR the post step ran but left no outcome record.
+- `failed` — the lead create returned a **non-2xx** (the tweet was never created).
+- `unknown` — the claim file is present but corrupt/unreadable.
 
-`should_skip_for_claim()` treats `claimed | posted | posted_partial` as
-**consumed** (never re-post). Only `None` (no claim) and `failed` are re-postable.
-Choosing to treat an ambiguous `claimed` as consumed means **no-duplicate beats
-no-miss**: the worst case is a rare *missed* day, never a duplicate public post.
+`should_skip_for_claim()` treats `claimed | posted | posted_partial |
+posted_unknown | unknown` as **consumed** (never re-post). Only `None` (no claim)
+and `failed` (lead provably never landed → safe to retry) are re-postable.
+Treating every ambiguous case as consumed means **no-duplicate beats no-miss**:
+the worst case is a rare *missed* day, never a duplicate public post.
+
+**Date pinning:** the claim step computes one UTC date and passes it as `--date`
+to the post and finalize steps, so a midnight-UTC flip can't make them disagree.
+`--post-claimed` is **fail-closed**: it refuses to post unless a live `claimed`
+record exists for that exact date (no fallback to `state.json`).
 
 ## Workflow steps (`.github/workflows/daily_post.yml`)
 1. **Claim today** — `python bot.py --claim` writes the claim if today is free;
