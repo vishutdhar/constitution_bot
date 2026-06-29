@@ -182,6 +182,47 @@ def main():
             bot.init_platforms = orig_init
         check("wrapped_advances_and_heals", json.load(open(bot.STATE_FILE))["current_day"] == 2)
 
+    # Finalize ignores stale log rows from earlier attempts: a pre-claim 'failed'
+    # row must not overwrite the safe posted_unknown default when this attempt left
+    # no fresh row (posted then crashed before logging) — that would reopen a
+    # possibly-live slot and risk a duplicate.
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=5)
+        D = today()
+        bot.LOG_FILE.write_text(json.dumps([
+            {"timestamp": f"{D}T00:00:00+00:00", "day": 5, "section": "S5",
+             "platform": "X", "slot": "morning", "success": False,
+             "partial": False, "uncertain": False}
+        ]))
+        bot.run_claim_slot(D, "morning")  # claim updated_at = now, after the stale row
+        bot.run_finalize_slot(D, "morning")
+        check("finalize_ignores_stale_failed",
+              bot.claim_status(bot._slot_key(D, "morning")) == "posted_unknown")
+        log = json.load(open(bot.LOG_FILE))
+        log.append({"timestamp": f"{D}T23:59:59+00:00", "day": 5, "section": "S5",
+                    "platform": "X", "slot": "morning", "success": True,
+                    "partial": False, "uncertain": False})
+        bot.LOG_FILE.write_text(json.dumps(log))
+        bot.run_finalize_slot(D, "morning")
+        check("finalize_honors_fresh_row",
+              bot.claim_status(bot._slot_key(D, "morning")) == "posted")
+
+    # Video slot carries an image fallback, and posting passes both paths so a
+    # rejected video upload degrades to the image rather than to a text-only post.
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=5, image_days=(5,), video_days=(5,))
+        posts = {p["day"]: p for p in bot.load_posts()}
+        comp = bot.compose_slot(posts[5], 5, 77, "night")
+        check("video_has_image_fallback", comp["is_video"] and bool(comp.get("image_fallback")))
+        fp = FakePlatform()
+        bot.init_platforms = lambda: [fp]
+        try:
+            bot._post_composed(comp, posts[5])
+        finally:
+            bot.init_platforms = orig_init
+        kw = fp.posted[-1][1]
+        check("video_passes_both_paths", "video_path" in kw and "image_path" in kw)
+
     if failures:
         print("FAILED:")
         for f in failures:

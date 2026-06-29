@@ -340,24 +340,43 @@ def run_finalize_slot(date_str: str, slot: str) -> int:
         print(f"ℹ️  No {slot} claim for {date_str} to finalize.")
         return 0
     status = "posted_unknown"
+    # Only log rows from THIS claim attempt count. The claim is (re)written at the
+    # start of every attempt, so its timestamp is a lower bound: a stale row from an
+    # earlier attempt for the same date+slot sits before it and must be ignored.
+    # Otherwise, if this attempt posted but crashed before logging, finalize would
+    # pick up the old 'failed' row, overwrite the safe posted_unknown default, and
+    # reopen a possibly-live slot -> duplicate on the next retry.
+    claim_dt = None
+    claim_ts = claim.get("updated_at")
+    if claim_ts:
+        try:
+            claim_dt = datetime.fromisoformat(claim_ts)
+        except (TypeError, ValueError):
+            claim_dt = None
     if LOG_FILE.exists():
         try:
             with open(LOG_FILE) as f:
                 log = json.load(f)
         except (json.JSONDecodeError, OSError):
             log = []
-        todays = []
+        mine = []
         for e in log:
             if e.get("slot") != slot:
                 continue
             ts = e.get("timestamp")
+            if not ts:
+                continue
             try:
-                if ts and datetime.fromisoformat(ts).date().isoformat() == date_str:
-                    todays.append(e)
+                row_dt = datetime.fromisoformat(ts)
             except (TypeError, ValueError):
                 continue
-        if todays:
-            status = finalize_status_for_result(todays[-1])
+            if row_dt.date().isoformat() != date_str:
+                continue
+            if claim_dt is not None and row_dt < claim_dt:
+                continue  # stale row from an earlier attempt for this date+slot
+            mine.append(e)
+        if mine:
+            status = finalize_status_for_result(mine[-1])
     try:
         write_claim(key, claim.get("day", 0), status)
         print(f"🏁 Finalized {date_str} {slot}: {status}")
@@ -397,11 +416,18 @@ def compose_slot(entry: dict, day: int, total_days: int, slot: str) -> dict:
         return {"slot": slot, "kind": "text", "media_path": None, "is_video": False,
                 "lead_text": lead, "image_text": None, "body_text": None}
 
+    # For a video slot, carry the day's image as a fallback so a rejected video
+    # upload/transcode degrades to the image (correct content) rather than to a
+    # text-only post. x_twitter.post() uses image_path only when also provided.
+    image_fallback = None
+    if is_video:
+        image_fallback = resolve_imagev2_path(day) or resolve_image_path(day, load_image_mapping())
+
     hook = {"morning": "Read", "afternoon": "See", "night": "Hear"}.get(slot, "Read")
     caption = f"📜 {section}\n\nDay {day}/{total_days}. {hook} today's clause.\n\n{tags}"
     return {"slot": slot, "kind": "video" if is_video else "image", "media_path": media_path,
             "is_video": is_video, "lead_text": format_post(entry, total_days),
-            "image_text": caption, "body_text": full}
+            "image_text": caption, "body_text": full, "image_fallback": image_fallback}
 
 
 def _post_composed(comp: dict, entry: dict) -> int:
@@ -423,6 +449,9 @@ def _post_composed(comp: dict, entry: dict) -> int:
         if comp["media_path"]:
             if comp["is_video"]:
                 kwargs["video_path"] = comp["media_path"]
+                # Image fallback so a rejected video degrades to the image, not text.
+                if comp.get("image_fallback"):
+                    kwargs["image_path"] = comp["image_fallback"]
             else:
                 kwargs["image_path"] = comp["media_path"]
             kwargs["image_text"] = comp["image_text"]
