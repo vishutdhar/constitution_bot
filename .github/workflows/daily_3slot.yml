@@ -1,0 +1,126 @@
+# 3-slot posting: one section per day posted three ways at three times.
+#   morning (12:23 UTC) -> text     afternoon (16:47 UTC) -> image
+#   night   (20:11 UTC) -> video (falls back to image when no video is present)
+#
+# GATED OFF by default. The job runs only when the repo variable
+#   ENABLE_3SLOT == 'true'
+# is set (Settings -> Secrets and variables -> Actions -> Variables). Until then
+# this workflow triggers but skips, so the existing daily_post.yml keeps running.
+# To go live: set ENABLE_3SLOT=true AND disable daily_post.yml (else double posts).
+#
+# Idempotency reuses the per-(date,slot) claim fence (see docs/IDEMPOTENCY.md):
+# each slot is claimed+pushed BEFORE its post; the day is pinned once per date and
+# state advances once per date.
+
+name: Daily Constitution Post (3-slot)
+
+on:
+  schedule:
+    - cron: "23 12 * * *" # morning -> text
+    - cron: "47 16 * * *" # afternoon -> image
+    - cron: "11 20 * * *" # night -> video
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Slot to run (morning|afternoon|night)"
+        required: true
+        type: choice
+        options: [morning, afternoon, night]
+
+concurrency:
+  group: daily-3slot-${{ github.event.schedule || github.event.inputs.slot }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_3SLOT == 'true'
+
+    steps:
+      - name: Resolve slot
+        id: cfg
+        env:
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_SLOT: ${{ github.event.inputs.slot }}
+        run: |
+          case "$EVENT_SCHEDULE" in
+            "23 12 * * *") SLOT=morning ;;
+            "47 16 * * *") SLOT=afternoon ;;
+            "11 20 * * *") SLOT=night ;;
+            *) SLOT="$DISPATCH_SLOT" ;;
+          esac
+          if [ -z "$SLOT" ]; then echo "Could not resolve slot"; exit 1; fi
+          echo "SLOT=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "Resolved slot: $SLOT"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 1) Claim this slot BEFORE posting. The push is the fence. The day pin and
+      #    the state advance (state.json) are part of this durable commit.
+      - name: Claim slot
+        id: claim
+        env:
+          SLOT: ${{ steps.cfg.outputs.SLOT }}
+        run: |
+          git config user.name "Constitution Bot"
+          git config user.email "bot@users.noreply.github.com"
+          CLAIM_DATE="$(date -u +%F)"
+          echo "CLAIM_DATE=$CLAIM_DATE" >> "$GITHUB_OUTPUT"
+          python bot.py --claim --slot "$SLOT" --date "$CLAIM_DATE"
+          git add claims/ state.json
+          if git diff --cached --quiet; then
+            echo "CLAIM_OK=false" >> "$GITHUB_OUTPUT"
+            echo "$SLOT already claimed/posted for $CLAIM_DATE — skipping."
+            exit 0
+          fi
+          git commit -m "Claim $SLOT $CLAIM_DATE"
+          # Fast-forward push ONLY (the mutex). Do NOT add 'git pull --rebase' here.
+          if git push origin HEAD:main; then
+            echo "CLAIM_OK=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "CLAIM_OK=false" >> "$GITHUB_OUTPUT"
+            echo "Claim push rejected — another run owns this slot. Skipping."
+            git reset --hard origin/main
+          fi
+
+      # 2) Post only if we won the claim. X credentials live ONLY here.
+      - name: Post slot
+        if: steps.claim.outputs.CLAIM_OK == 'true'
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          SLOT: ${{ steps.cfg.outputs.SLOT }}
+          CLAIM_DATE: ${{ steps.claim.outputs.CLAIM_DATE }}
+        run: python bot.py --post-claimed --slot "$SLOT" --date "$CLAIM_DATE"
+
+      # 3) Record the outcome + persist state/log. Runs even if the post crashed.
+      - name: Finalize slot
+        if: always() && steps.claim.outputs.CLAIM_OK == 'true'
+        env:
+          SLOT: ${{ steps.cfg.outputs.SLOT }}
+          CLAIM_DATE: ${{ steps.claim.outputs.CLAIM_DATE }}
+        run: |
+          git config user.name "Constitution Bot"
+          git config user.email "bot@users.noreply.github.com"
+          python bot.py --finalize --slot "$SLOT" --date "$CLAIM_DATE"
+          git add state.json post_log.json claims/
+          if git diff --cached --quiet; then
+            echo "Nothing to finalize-commit."
+          else
+            git commit -m "Posted $SLOT $CLAIM_DATE"
+            git pull --rebase && git push
+          fi

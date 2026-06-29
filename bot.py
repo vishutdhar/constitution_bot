@@ -35,6 +35,17 @@ VIDEOS_DIR = BASE_DIR / "video" / "videos"
 # Durable per-UTC-day claim files (committed+pushed BEFORE posting). One file per
 # date so concurrent days never conflict and a same-date claim conflicts cleanly.
 CLAIMS_DIR = BASE_DIR / "claims"
+# Version-2 per-day parchment images (used by the video + the 3-slot image post).
+IMAGESV2_DIR = BASE_DIR / "images_v2"
+
+# 3-slot strategy: one section/day posted three ways. Each slot has its own
+# durable claim (key "<date>__<slot>"); the day is pinned once per date (key
+# "<date>__pin"). See docs/IDEMPOTENCY.md. Gated by the daily_3slot workflow.
+SLOT_FORMATS = {"morning": "text", "afternoon": "image", "night": "video"}
+# Days whose video narration is materially wrong (old text baked before the
+# verbatim correction); at night these post the image instead of the video so we
+# never broadcast clearly-wrong audio. See project notes / docs/IDEMPOTENCY.md.
+WORST5_NIGHT_DAYS = {10, 23, 58, 69, 75}
 
 # ---------------------------------------------------------------------------
 # Fallback hashtags — used only if an entry has no "hashtags" field
@@ -265,6 +276,204 @@ def run_finalize(date_str: str) -> int:
 
 
 # ---------------------------------------------------------------------------
+# 3-slot posting (morning text / afternoon image / night video)
+#
+# One section per day, posted three ways. Each slot has its own durable claim
+# (key "<date>__<slot>"); the day is pinned once per date (key "<date>__pin")
+# and state advances exactly once per date. The corrected verbatim text is
+# carried in the tweet copy in EVERY slot (the free accuracy lever); the image
+# and video assets are used as-is.
+# ---------------------------------------------------------------------------
+def resolve_imagev2_path(day_num: int) -> str | None:
+    """The version-2 per-day parchment image (images_v2/day_NN_*.png)."""
+    import glob
+
+    matches = sorted(glob.glob(str(IMAGESV2_DIR / f"day_{day_num:02d}_*.png")))
+    return matches[0] if matches else None
+
+
+def _slot_key(date_str: str, slot: str) -> str:
+    return f"{date_str}__{slot}"
+
+
+def pin_day(date_str: str) -> int:
+    """
+    Pin the section day for a date, advancing state EXACTLY once per date. The
+    first slot to claim on a date writes the pin and advances; later slots read
+    it. Returns the pinned day.
+    """
+    pin = read_claim(_slot_key(date_str, "pin"))
+    if pin and isinstance(pin.get("day"), int):
+        return pin["day"]
+    posts = load_posts()
+    total = len(posts)
+    state = load_state()
+    day = state["current_day"]
+    if day > total:
+        day = 1
+    write_claim(_slot_key(date_str, "pin"), day, "pinned")
+    state["current_day"] = (day % total) + 1  # advance, wrapping 77 -> 1
+    save_state(state)
+    return day
+
+
+def run_claim_slot(date_str: str, slot: str) -> int:
+    """Claim one slot for a date (writes nothing if the slot is already consumed)."""
+    key = _slot_key(date_str, slot)
+    if should_skip_for_claim(claim_status(key)):
+        print(f"⏭️  {date_str} {slot} already claimed/posted — nothing to claim.")
+        return 0
+    day = pin_day(date_str)
+    posts = load_posts()
+    if not any(p["day"] == day for p in posts):
+        print(f"❌ No post found for day {day} — not claiming {slot}.")
+        return 1
+    write_claim(key, day, "claimed")
+    print(f"📌 Claimed {slot} (day {day}) for {date_str}.")
+    return 0
+
+
+def run_finalize_slot(date_str: str, slot: str) -> int:
+    """Record a slot's outcome into its claim. Runs with if: always(); never raises."""
+    key = _slot_key(date_str, slot)
+    claim = read_claim(key)
+    if claim is None:
+        print(f"ℹ️  No {slot} claim for {date_str} to finalize.")
+        return 0
+    status = "posted_unknown"
+    if LOG_FILE.exists():
+        try:
+            with open(LOG_FILE) as f:
+                log = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            log = []
+        todays = []
+        for e in log:
+            if e.get("slot") != slot:
+                continue
+            ts = e.get("timestamp")
+            try:
+                if ts and datetime.fromisoformat(ts).date().isoformat() == date_str:
+                    todays.append(e)
+            except (TypeError, ValueError):
+                continue
+        if todays:
+            status = finalize_status_for_result(todays[-1])
+    try:
+        write_claim(key, claim.get("day", 0), status)
+        print(f"🏁 Finalized {date_str} {slot}: {status}")
+    except OSError as e:
+        print(f"⚠️  Could not finalize {slot} claim for {date_str}: {e}")
+    return 0
+
+
+def compose_slot(entry: dict, day: int, total_days: int, slot: str) -> dict:
+    """
+    Build the post for a slot. The corrected verbatim text is carried in the
+    tweet copy in every slot; the image/video assets are used as-is.
+    """
+    section = entry["section"]
+    full = entry["text"]
+    tags = entry.get("hashtags", HASHTAGS)
+    fmt = SLOT_FORMATS.get(slot, "text")
+
+    # Night worst-5: the video narration is materially wrong -> post the image.
+    if fmt == "video" and day in WORST5_NIGHT_DAYS:
+        fmt = "image"
+
+    media_path = None
+    is_video = False
+    if fmt == "video":
+        media_path = resolve_video_path(day)
+        if media_path:
+            is_video = True
+        else:
+            fmt = "image"  # graceful fallback when the video is unavailable
+    if fmt == "image":
+        media_path = resolve_imagev2_path(day) or resolve_image_path(day, load_image_mapping())
+
+    if media_path is None:
+        # Text slot, or no asset available: the full clause IS the post.
+        lead = f"📜 Day {day}/{total_days}: {section}\n\nRead today's clause:\n\n{full}\n\n{tags}"
+        return {"slot": slot, "kind": "text", "media_path": None, "is_video": False,
+                "lead_text": lead, "image_text": None, "body_text": None}
+
+    hook = {"morning": "Read", "afternoon": "See", "night": "Hear"}.get(slot, "Read")
+    caption = f"📜 {section}\n\nDay {day}/{total_days}. {hook} today's clause.\n\n{tags}"
+    return {"slot": slot, "kind": "video" if is_video else "image", "media_path": media_path,
+            "is_video": is_video, "lead_text": format_post(entry, total_days),
+            "image_text": caption, "body_text": full}
+
+
+def _post_composed(comp: dict, entry: dict) -> int:
+    """Post a composed slot to all platforms; log per slot. Returns 0/1."""
+    platforms = init_platforms()
+    if not platforms:
+        print("❌ No platforms configured. Set X_* env vars and try again.")
+        return 1
+    all_success = True
+    for platform in platforms:
+        gate = comp["image_text"] if comp["media_path"] else comp["lead_text"]
+        if not platform.validate_length(gate):
+            print(f"⚠️  Post too long for {platform.name} ({weighted_len(gate)} > {platform.max_length})")
+            all_success = False
+            continue
+        kwargs = {"reply_char_limit": REPLY_CHAR_LIMIT}
+        if comp["media_path"]:
+            if comp["is_video"]:
+                kwargs["video_path"] = comp["media_path"]
+            else:
+                kwargs["image_path"] = comp["media_path"]
+            kwargs["image_text"] = comp["image_text"]
+            kwargs["body_text"] = comp["body_text"]
+        result = platform.post(comp["lead_text"], **kwargs)
+        log_post(entry, result, platform.name, slot=comp["slot"])
+        if not result["success"]:
+            all_success = False
+    return 0 if all_success else 1
+
+
+def run_post_slot(date_str: str, slot: str) -> int:
+    """Post one slot. Fail-closed: requires a live 'claimed' record for the slot."""
+    key = _slot_key(date_str, slot)
+    if claim_status(key) != "claimed":
+        print(f"❌ No live {slot} claim for {date_str} — refusing to post.")
+        return 1
+    day = read_claim(key)["day"]
+    posts = load_posts()
+    total = len(posts)
+    entry = next((p for p in posts if p["day"] == day), None)
+    if not entry:
+        print(f"❌ No post found for day {day}")
+        return 1
+    return _post_composed(compose_slot(entry, day, total, slot), entry)
+
+
+def preview_slot(slot: str, day_override: int | None = None) -> int:
+    """Preview a slot for the next (or a specific) day. Posts nothing."""
+    posts = load_posts()
+    total = len(posts)
+    state = load_state()
+    day = day_override or state["current_day"]
+    if day > total:
+        day = 1
+    entry = next((p for p in posts if p["day"] == day), None)
+    if not entry:
+        print(f"❌ No post found for day {day}")
+        return 1
+    comp = compose_slot(entry, day, total, slot)
+    print(f"\n{'='*60}\n  {slot.upper()} — Day {day}/{total} — {entry['section']}  [{comp['kind']}]\n{'='*60}")
+    if comp["media_path"]:
+        print(f"  media: {Path(comp['media_path']).name}")
+        print(f"\n  CAPTION (tweet 1):\n  {comp['image_text']}")
+        print(f"\n  REPLY (full verbatim text):\n  {comp['body_text']}")
+    else:
+        print(f"\n  TEXT POST:\n  {comp['lead_text']}")
+    print(f"{'='*60}\n")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Post loading & formatting
 # ---------------------------------------------------------------------------
 def load_posts() -> list[dict]:
@@ -401,7 +610,7 @@ def validate_all_mappings(posts: list[dict], mapping: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-def log_post(entry: dict, result: dict, platform: str) -> None:
+def log_post(entry: dict, result: dict, platform: str, slot: str | None = None) -> None:
     """Append a record to the post log."""
     log = []
     if LOG_FILE.exists():
@@ -414,6 +623,7 @@ def log_post(entry: dict, result: dict, platform: str) -> None:
             "day": entry["day"],
             "section": entry["section"],
             "platform": platform,
+            "slot": slot,
             "success": result["success"],
             "partial": result.get("partial", False),
             "uncertain": result.get("uncertain", False),
@@ -485,6 +695,7 @@ def main():
     parser.add_argument("--post-claimed", action="store_true", help="Post the day pinned by the claim file for --date")
     parser.add_argument("--finalize", action="store_true", help="Record the post outcome into the claim file for --date (run with if: always())")
     parser.add_argument("--date", type=str, help="UTC date (YYYY-MM-DD) the claim modes operate on; defaults to today. Pinned across claim/post/finalize.")
+    parser.add_argument("--slot", choices=["morning", "afternoon", "night"], help="3-slot mode: which slot (morning=text, afternoon=image, night=video) to claim/post/finalize/preview")
     args = parser.parse_args()
 
     if args.reset:
@@ -494,6 +705,19 @@ def main():
     # The claim/post/finalize trio must agree on ONE date even across a midnight
     # UTC flip, so the workflow pins --date from the claim step.
     claim_date = args.date or _today_utc()
+
+    # --- 3-slot mode (driven by the gated daily_3slot workflow) ---
+    if args.slot:
+        if args.claim:
+            sys.exit(run_claim_slot(claim_date, args.slot))
+        if args.finalize:
+            sys.exit(run_finalize_slot(claim_date, args.slot))
+        if args.post_claimed:
+            sys.exit(run_post_slot(claim_date, args.slot))
+        if args.preview:
+            sys.exit(preview_slot(args.slot, args.day))
+        print("--slot requires one of --claim / --post-claimed / --finalize / --preview")
+        sys.exit(2)
 
     # Idempotency fence modes (used by the CI workflow). See docs/IDEMPOTENCY.md.
     if args.claim:
