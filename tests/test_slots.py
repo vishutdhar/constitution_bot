@@ -77,16 +77,23 @@ def main():
         check("morning_text", m["kind"] == "text" and m["media_path"] is None and "Read today" in m["lead_text"])
         a = bot.compose_slot(posts[5], 5, 77, "afternoon")
         check("afternoon_image", a["kind"] == "image" and a["media_path"].endswith("day_05_s.png") and a["body_text"] == "text 5")
+        check("afternoon_hook_see", "See today's clause" in a["image_text"])
         n = bot.compose_slot(posts[5], 5, 77, "night")
         check("night_video", n["kind"] == "video" and n["is_video"] and n["media_path"].endswith("day_05.mp4"))
+        check("night_video_hook_hear", "Hear today's clause" in n["image_text"])
         # Worst-5 night (day 10) downgrades to image even though a video exists.
         n10 = bot.compose_slot(posts[10], 10, 77, "night")
         check("night_worst5_image", n10["kind"] == "image" and not n10["is_video"] and n10["media_path"].endswith("day_10_s.png"))
-        # Night with NO video available falls back to image.
+        # Hook follows the actual media: a downgraded night image says "See", not "Hear".
+        check("night_worst5_hook_see",
+              "See today's clause" in n10["image_text"] and "Hear" not in n10["image_text"])
+        # Night with NO video available falls back to image (and to the "See" hook).
         setup_tmp(tmp, state_day=5, image_days=(6,), video_days=())
         posts = {p["day"]: p for p in bot.load_posts()}
         n6 = bot.compose_slot(posts[6], 6, 77, "night")
         check("night_no_video_fallback", n6["kind"] == "image")
+        check("night_no_video_hook_see",
+              "See today's clause" in n6["image_text"] and "Hear" not in n6["image_text"])
 
     # Fail-closed: posting a slot with no live claim returns nonzero.
     with tempfile.TemporaryDirectory() as tmp:

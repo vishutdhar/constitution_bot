@@ -423,7 +423,10 @@ def compose_slot(entry: dict, day: int, total_days: int, slot: str) -> dict:
     if is_video:
         image_fallback = resolve_imagev2_path(day) or resolve_image_path(day, load_image_mapping())
 
-    hook = {"morning": "Read", "afternoon": "See", "night": "Hear"}.get(slot, "Read")
+    # Hook follows the ACTUAL media kind, not the slot: a night slot that downgraded
+    # to an image (no video available, or a worst-5 day) must say "See", not "Hear".
+    # The text path has already returned above, so media here is image or video.
+    hook = "Hear" if is_video else "See"
     caption = f"📜 {section}\n\nDay {day}/{total_days}. {hook} today's clause.\n\n{tags}"
     return {"slot": slot, "kind": "video" if is_video else "image", "media_path": media_path,
             "is_video": is_video, "lead_text": format_post(entry, total_days),
