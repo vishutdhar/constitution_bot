@@ -298,9 +298,10 @@ def _slot_key(date_str: str, slot: str) -> str:
 
 def pin_day(date_str: str) -> int:
     """
-    Pin the section day for a date, advancing state EXACTLY once per date. The
-    first slot to claim on a date writes the pin and advances; later slots read
-    it. Returns the pinned day.
+    Pin the section day for a date (written once; later slots read it). Does NOT
+    advance state — state advances only after a slot actually posts (see
+    run_post_slot), so a day on which every slot fails is retried the next date
+    rather than silently skipped. Returns the pinned day.
     """
     pin = read_claim(_slot_key(date_str, "pin"))
     if pin and isinstance(pin.get("day"), int):
@@ -312,8 +313,6 @@ def pin_day(date_str: str) -> int:
     if day > total:
         day = 1
     write_claim(_slot_key(date_str, "pin"), day, "pinned")
-    state["current_day"] = (day % total) + 1  # advance, wrapping 77 -> 1
-    save_state(state)
     return day
 
 
@@ -448,7 +447,16 @@ def run_post_slot(date_str: str, slot: str) -> int:
     if not entry:
         print(f"❌ No post found for day {day}")
         return 1
-    return _post_composed(compose_slot(entry, day, total, slot), entry)
+    rc = _post_composed(compose_slot(entry, day, total, slot), entry)
+    if rc == 0:
+        # Advance the section ONCE per date, only after a slot actually posts, so a
+        # day on which every slot failed is retried next date, not lost.
+        state = load_state()
+        if state.get("current_day") == day:
+            state["current_day"] = (day % total) + 1
+            save_state(state)
+            print(f"📅 Advanced to day {(day % total) + 1}")
+    return rc
 
 
 def preview_slot(slot: str, day_override: int | None = None) -> int:
@@ -495,7 +503,7 @@ def format_post(entry: dict, total_days: int) -> str:
 
         #USConstitution #SectionSpecific #Community
     """
-    header = f"📜 Day {entry['day']}/{total_days} — {entry['section']}"
+    header = f"📜 Day {entry['day']}/{total_days}: {entry['section']}"
     body = entry["text"]
     hashtags = entry.get("hashtags", HASHTAGS)
     tweet = f"{header}\n\n{body}\n\n{hashtags}"

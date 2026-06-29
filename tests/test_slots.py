@@ -58,15 +58,16 @@ def main():
         D = "2026-01-01"
         for slot in ("morning", "afternoon", "night"):
             check(f"claim_{slot}_rc", bot.run_claim_slot(D, slot) == 0)
-        check("state_advanced_once", json.load(open(bot.STATE_FILE))["current_day"] == 6)
+        # Claiming pins the day but does NOT advance state (advance happens on post).
+        check("no_advance_at_claim", json.load(open(bot.STATE_FILE))["current_day"] == 5)
         days = {s: bot.read_claim(bot._slot_key(D, s))["day"] for s in ("morning", "afternoon", "night")}
         check("all_slots_day5", set(days.values()) == {5})
         check("all_slots_claimed", all(bot.claim_status(bot._slot_key(D, s)) == "claimed" for s in days))
-        # Re-claiming a slot writes nothing new and does not advance again.
+        # Re-claiming a slot writes nothing new.
         before = bot.claim_path(bot._slot_key(D, "morning")).read_text()
         bot.run_claim_slot(D, "morning")
         check("reclaim_noop", bot.claim_path(bot._slot_key(D, "morning")).read_text() == before)
-        check("state_still_6", json.load(open(bot.STATE_FILE))["current_day"] == 6)
+        check("state_still_5", json.load(open(bot.STATE_FILE))["current_day"] == 5)
 
     # compose_slot format selection.
     with tempfile.TemporaryDirectory() as tmp:
@@ -145,6 +146,25 @@ def main():
         finally:
             bot.init_platforms = orig_init
         check("long_caption_skipped", rc2 == 1 and len(fp2.posted) == 0)
+
+    # State advances once per date, only on a successful post (not at claim).
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=5, image_days=(5,))
+        D = "2026-02-02"
+        bot.run_claim_slot(D, "morning")
+        bot.run_claim_slot(D, "afternoon")
+        check("post_no_advance_at_claim", json.load(open(bot.STATE_FILE))["current_day"] == 5)
+        fp = FakePlatform()
+        bot.init_platforms = lambda: [fp]
+        try:
+            bot.run_post_slot(D, "morning")
+            after_morning = json.load(open(bot.STATE_FILE))["current_day"]
+            bot.run_post_slot(D, "afternoon")
+            after_afternoon = json.load(open(bot.STATE_FILE))["current_day"]
+        finally:
+            bot.init_platforms = orig_init
+        check("advance_on_first_post", after_morning == 6)
+        check("advance_once_per_date", after_afternoon == 6)
 
     if failures:
         print("FAILED:")

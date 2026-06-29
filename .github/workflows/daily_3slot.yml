@@ -28,7 +28,10 @@ on:
         options: [morning, afternoon, night]
 
 concurrency:
-  group: daily-3slot-${{ github.event.schedule || github.event.inputs.slot }}
+  # Date-wide (one group for all slots) so the three slots run one at a time and
+  # never race the claim push from the same base. Runs are hours apart, so this
+  # adds no practical delay; an overlapping run just queues.
+  group: daily-3slot
   cancel-in-progress: false
 
 permissions:
