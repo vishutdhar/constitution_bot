@@ -107,6 +107,45 @@ def main():
         bot.run_finalize_slot(D, "afternoon")
         check("finalize_no_claim_noop", bot.read_claim(bot._slot_key(D, "afternoon")) is None)
 
+    # A long text slot must reach the threader, not be rejected by the 1400 preflight
+    # gate (Codex P2). The media caption gate still applies.
+    class FakePlatform:
+        name = "X"
+        max_length = 1400
+
+        def __init__(self):
+            self.posted = []
+
+        def validate_length(self, text):
+            return len(text) <= self.max_length
+
+        def post(self, text, **kw):
+            self.posted.append((text, kw))
+            return {"success": True}
+
+    orig_init = bot.init_platforms
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=5)
+        fp = FakePlatform()
+        bot.init_platforms = lambda: [fp]
+        try:
+            comp = {"slot": "morning", "kind": "text", "media_path": None, "is_video": False,
+                    "lead_text": "X" * 2200, "image_text": None, "body_text": None}
+            rc = bot._post_composed(comp, {"day": 75, "section": "S75"})
+        finally:
+            bot.init_platforms = orig_init
+        check("long_text_not_skipped", rc == 0 and len(fp.posted) == 1)
+
+        fp2 = FakePlatform()
+        bot.init_platforms = lambda: [fp2]
+        try:
+            comp2 = {"slot": "afternoon", "kind": "image", "media_path": "/x.png", "is_video": False,
+                     "lead_text": "f", "image_text": "Y" * 1500, "body_text": "b"}
+            rc2 = bot._post_composed(comp2, {"day": 5, "section": "S5"})
+        finally:
+            bot.init_platforms = orig_init
+        check("long_caption_skipped", rc2 == 1 and len(fp2.posted) == 0)
+
     if failures:
         print("FAILED:")
         for f in failures:

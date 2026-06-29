@@ -413,9 +413,11 @@ def _post_composed(comp: dict, entry: dict) -> int:
         return 1
     all_success = True
     for platform in platforms:
-        gate = comp["image_text"] if comp["media_path"] else comp["lead_text"]
-        if not platform.validate_length(gate):
-            print(f"⚠️  Post too long for {platform.name} ({weighted_len(gate)} > {platform.max_length})")
+        # Only the single-tweet media caption must fit the per-tweet limit. The
+        # text-only slot has no preflight gate: post() threads it (split_into_thread
+        # at reply_char_limit), so a long verbatim clause is never rejected here.
+        if comp["media_path"] and not platform.validate_length(comp["image_text"]):
+            print(f"⚠️  Caption too long for {platform.name} ({weighted_len(comp['image_text'])} > {platform.max_length})")
             all_success = False
             continue
         kwargs = {"reply_char_limit": REPLY_CHAR_LIMIT}
