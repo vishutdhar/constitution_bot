@@ -26,8 +26,9 @@ where an old baked image or narration is imperfect, the words people read are co
 Reuses the claim fence (`docs/IDEMPOTENCY.md`), generalized to per-(date, slot):
 - Each slot has its own claim file `claims/<date>__<slot>.json`, claimed and pushed
   before its post.
-- The section day is pinned once per date in `claims/<date>__pin.json`, and
-  `state.json` advances exactly once per date (the first slot to run pins + advances).
+- The section day is pinned once per date in `claims/<date>__pin.json` at claim
+  time, and `state.json` advances exactly once per date AFTER the first slot
+  actually posts (a day whose every slot fails is retried next date, not skipped).
 - `--post-claimed --slot` is fail-closed: it refuses unless a live `claimed` record
   exists for that slot.
 

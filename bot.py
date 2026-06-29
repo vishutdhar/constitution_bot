@@ -450,11 +450,18 @@ def run_post_slot(date_str: str, slot: str) -> int:
     rc = _post_composed(compose_slot(entry, day, total, slot), entry)
     if rc == 0:
         # Advance the section ONCE per date, only after a slot actually posts, so a
-        # day on which every slot failed is retried next date, not lost.
-        state = load_state()
-        if state.get("current_day") == day:
+        # day on which every slot failed is retried next date, not lost. The pin's
+        # own status is the once-per-date guard, NOT the live state value: the
+        # legacy single-post path can leave current_day at total+1, which pin_day
+        # wraps to 1 without persisting, so a `state == day` check would be falsely
+        # false and freeze the bot on day 1 forever. Setting state to the next day
+        # unconditionally also self-heals that wrapped value.
+        pin_key = _slot_key(date_str, "pin")
+        if claim_status(pin_key) != "advanced":
+            state = load_state()
             state["current_day"] = (day % total) + 1
             save_state(state)
+            write_claim(pin_key, day, "advanced")
             print(f"📅 Advanced to day {(day % total) + 1}")
     return rc
 

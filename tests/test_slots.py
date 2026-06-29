@@ -166,6 +166,22 @@ def main():
         check("advance_on_first_post", after_morning == 6)
         check("advance_once_per_date", after_afternoon == 6)
 
+    # Wrapped state (legacy left current_day at total+1): pin_day posts day 1, and a
+    # successful post must still advance (to day 2) AND self-heal the wrapped value,
+    # instead of freezing on day 1 forever.
+    with tempfile.TemporaryDirectory() as tmp:
+        setup_tmp(tmp, state_day=78)  # 78 = total(77) + 1
+        D = "2026-03-03"
+        bot.run_claim_slot(D, "morning")
+        check("wrapped_pins_day1", bot.read_claim(bot._slot_key(D, "morning"))["day"] == 1)
+        fp = FakePlatform()
+        bot.init_platforms = lambda: [fp]
+        try:
+            bot.run_post_slot(D, "morning")
+        finally:
+            bot.init_platforms = orig_init
+        check("wrapped_advances_and_heals", json.load(open(bot.STATE_FILE))["current_day"] == 2)
+
     if failures:
         print("FAILED:")
         for f in failures:
