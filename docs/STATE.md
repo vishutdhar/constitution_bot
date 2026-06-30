@@ -128,8 +128,10 @@ Ordered by what unblocks the most:
 - **Night degrades in three layers:** worst-5 day posts image; no video file present
   posts image; a video that is rejected at upload degrades to the day's image (passed
   as an upload fallback) rather than to text only.
-- **Caption hook follows the actual media kind**, not the slot name, so a night that
-  downgrades to an image says "See", not "Hear".
+- **Caption hook follows the media kind chosen at compose time**, not the slot name,
+  so a night that downgrades to an image because it is a worst-5 day or has no video
+  file says "See", not "Hear". The rarer runtime upload-fallback image keeps the
+  "Hear" caption (a known minor cosmetic mismatch; see `docs/THREE-SLOT.md`).
 
 ## Key files
 

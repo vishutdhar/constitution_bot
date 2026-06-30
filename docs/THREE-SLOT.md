@@ -36,8 +36,15 @@ The night slot degrades to a safe option in three layers:
   the night slot, not just the legacy `--video` path.
 - **Video rejected at upload:** when a video IS present but its upload or transcode is
   rejected, the post degrades to the day's image (passed alongside the video as an
-  upload fallback) rather than to text only. The caption hook follows the actual media
-  kind, so a downgraded night image says "See", not "Hear".
+  upload fallback) rather than to text only.
+
+The caption hook is chosen at compose time from the format that was selected, so the
+first two downgrades (worst-5 and no-file) build the caption as an image and say "See".
+The third (upload rejected) is decided at runtime inside `post()` after the caption is
+already built as a video ("Hear"), and the caption is not recomputed, so that fallback
+image keeps the "Hear today's clause" wording. This is a known minor cosmetic mismatch
+on a rare path (it needs a video file present, so it cannot occur while videos are
+absent from the runner); the verbatim text in the post is still correct.
 
 ## Idempotency
 Reuses the claim fence (`docs/IDEMPOTENCY.md`), generalized to per-(date, slot):

@@ -56,8 +56,12 @@ cp .env.example .env   # then edit .env with your API keys
 python bot.py --preview                 # preview the single post for the next day
 python bot.py --preview --day 46        # preview a specific day (Amendment I)
 python bot.py --preview --slot morning  # preview a 3-slot variant (morning|afternoon|night)
-python bot.py                           # post the next day's section (needs credentials)
+python bot.py                           # post the next day's section
 ```
+
+`bot.py` loads the credentials from `.env` automatically (via python-dotenv), so no
+manual `export` is needed. In GitHub Actions the same variables come from repository
+secrets instead.
 
 ## Automation (free, GitHub Actions)
 
