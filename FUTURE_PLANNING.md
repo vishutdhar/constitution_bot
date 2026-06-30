@@ -120,8 +120,8 @@ Open, ordered by what unblocks the most (see `docs/STATE.md` for detail):
 - Video storage for CI: the rendered videos are gitignored and absent on the runner,
   so the 3-slot night slot falls back to image. Publish `video/videos/` as a GitHub
   Release asset and download per day in the workflow. Options in `docs/VIDEO-POSTING.md`.
-- Go live with 3-slot: set `ENABLE_3SLOT=true` AND disable `daily_post.yml` (both, or
-  it double posts).
+- Go live with 3-slot: disable `daily_post.yml` FIRST, then set `ENABLE_3SLOT=true`
+  (disabling first means the worst case is one missed window, never a double post).
 - Deferred, needs budget: regenerate the 21 wrong-content images and audio (baked from
   pre-correction text) and re-render their videos. No-spend rule blocks this until
   approved. Playbook preserved in `plan.md`.

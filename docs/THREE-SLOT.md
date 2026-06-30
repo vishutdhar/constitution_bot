@@ -59,9 +59,13 @@ python bot.py --finalize     --slot <slot> --date <YYYY-MM-DD>
 
 ## Going live
 The 3-slot workflow (`.github/workflows/daily_3slot.yml`) is **gated off**: the job
-runs only when the repo variable `ENABLE_3SLOT == 'true'`. To switch over:
-1. Set `ENABLE_3SLOT=true` (repo Settings -> Variables).
-2. **Disable `daily_post.yml`** (the old single-post workflow) so the day is not
-   double-posted.
-Until both are done, the old single daily post keeps running and the 3-slot workflow
-triggers but skips.
+runs only when the repo variable `ENABLE_3SLOT == 'true'`. To switch over, do these in
+order (disable the old poster first):
+1. **Disable `daily_post.yml`** (the old single-post workflow). The two workflows share
+   the same crons but write different claim keys, so they do not fence each other; if
+   both are ever active at once a shared window double-posts.
+2. Then set `ENABLE_3SLOT=true` (repo Settings -> Variables).
+
+Order matters: disabling first means the worst case between the two changes is one
+missed window, never a duplicate. While `ENABLE_3SLOT` is unset the 3-slot workflow
+triggers on schedule but skips, so the old single daily post keeps running until step 2.

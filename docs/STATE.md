@@ -70,12 +70,17 @@ where a baked image or narration is imperfect, the words a reader reads are corr
 
 ## Go-live runbook (when ready to switch to 3-slot)
 
-Both steps are required, in this order, or the day double posts:
+Order matters: **disable the old poster BEFORE enabling the new one**, or a cron that
+fires in between runs both and double posts.
 
 1. Decide video storage (see below) or accept that night posts the image until then.
-2. Set the repo variable **`ENABLE_3SLOT=true`** (Settings, Variables, Actions).
-3. **Disable `daily_post.yml`** (Actions tab, or remove its `schedule:`) so the same
-   crons do not fire two posters.
+2. **Disable `daily_post.yml` first** (Actions tab, or remove its `schedule:`). The two
+   workflows share the same crons but write different claim keys, so they do not fence
+   each other; whenever both are active a shared window double posts.
+3. Then set the repo variable **`ENABLE_3SLOT=true`** (Settings, Variables, Actions).
+
+In this order the worst case between the two changes is a single missed window (neither
+poster active for one cron), never a duplicate.
 
 Preview any slot first without posting:
 
