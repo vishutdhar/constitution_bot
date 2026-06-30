@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
 """
 Daily Constitution Bot
-Posts one section of the U.S. Constitution per day to X (Twitter).
-Designed to be run once daily via cron, AWS Lambda, GitHub Actions, etc.
+Posts the U.S. Constitution to X (Twitter), one section per day over 77 days, then
+loops. Text is verbatim. There are two posting models: the single daily post (live)
+and a gated 3-slot mode (morning text / afternoon image / night video). See docs/STATE.md
+for the current state and direction, and docs/IDEMPOTENCY.md for the claim fence.
 
-Usage:
-    python bot.py              # Post today's section
-    python bot.py --preview    # Preview without posting
-    python bot.py --dry-run    # Alias for --preview
-    python bot.py --day 46     # Post (or preview) a specific day
-    python bot.py --reset      # Reset progress to day 1
-    python bot.py --validate   # Verify all 77 days have valid image mappings
+Usage (single-post path):
+    python bot.py                 # post the next day's section
+    python bot.py --preview       # preview without posting (alias: --dry-run)
+    python bot.py --day 46        # target a specific day (e.g. Amendment I)
+    python bot.py --video         # use the day's video instead of the image
+    python bot.py --reset         # reset progress to day 1
+    python bot.py --validate      # verify all 77 days load
+
+Usage (3-slot path; <slot> = morning|afternoon|night):
+    python bot.py --preview --slot <slot> [--day N]               # preview a slot, no post
+    python bot.py --claim        --slot <slot> --date YYYY-MM-DD  # claim before posting
+    python bot.py --post-claimed --slot <slot> --date YYYY-MM-DD  # post the claimed slot
+    python bot.py --finalize     --slot <slot> --date YYYY-MM-DD  # record the outcome
+
+Credentials load from .env automatically (python-dotenv); in CI they come from secrets.
 """
 
 import argparse
