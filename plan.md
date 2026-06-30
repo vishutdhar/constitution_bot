@@ -1,103 +1,86 @@
-# Constitution Bot — Plan
+# Constitution Bot, Plan
 
-Last updated: 2026-04-23
-Current state: Day 63/77 (text-only). Bot loops back to Day 1 around 2026-05-07, which is when new media formats go live.
+Last updated: 2026-06-30. Current state: looping (state.json day 57). The media
+assets and the 3-slot posting code are built and merged; 3-slot is gated off.
 
-## This Weekend (2026-04-25 / 2026-04-26)
+For the authoritative current state and direction, read `docs/STATE.md`. This file
+is the tactical history of how the media relaunch was built, plus the preserved
+playbook for the one piece of deferred work (regenerating wrong-content assets).
 
-Goal: finish every asset needed for the Day 78+ relaunch so the next loop posts text + image + short video automatically.
+## Status of the media relaunch
 
-### Phase 1 — Images: one unique picture per tweet (V2 regeneration)
+The original goal of this plan (build per day image, audio, and video, then post
+richer content) is done, though the final shape differs from the early sketch.
 
-Decision (2026-04-23): regenerate **all 77 images from scratch** for v2 — not extend the existing 55. Reason: the v1 set reuses images across multiple days, and the whole point of v2 is one image per tweet so each post's picture matches its specific text exactly. Also, v1 images use a more illustrated/cartoon style; v2 targets a photorealistic look.
+| Original phase | Status | What actually shipped |
+|---|---|---|
+| Phase 1, v2 images | Done | `images_v2/`, one parchment card per day |
+| Phase 2a, ElevenLabs audio | Done | `audio_male/`, `audio_female/` narration |
+| Phase 2b, short video | Done | Remotion (not ffmpeg) 1080x1920 videos in `video/videos/` |
+| Phase 2c, wire into bot | Done, redesigned | Not a `media_mode` flag and not one-post-with-media. It became **3-slot**: three separate posts per day at three UTC times (text, image, video), gated by the repo variable `ENABLE_3SLOT`. See `docs/THREE-SLOT.md`. |
 
-**Source of truth:** `chatgpt_image_prompts_v2.txt` — regenerated 2026-04-23 to contain exactly 77 prompts (one per day in `constitution_posts.json`). Each prompt embeds that day's actual constitutional text. Old 51-prompt version backed up at `chatgpt_image_prompts_v2.txt.bak`.
+Two important pivots happened after the early sketch:
 
-**Prompt template (already baked into all 77):**
-- Parchment scroll on wooden desk + American flags + oil lamp + leather books + pocket watch + quill template
-- Title and Text from that day's `constitution_posts.json` entry
-- Trailing instruction: "The text must be completely readable — every single word must be accurate and legible."
-- Final instruction (added 2026-04-23): "Research how the constitution looks like in reality and make it look as close to real as possible." — V confirmed via testing that ChatGPT will not produce the realistic style without this exact phrasing.
+1. **Verbatim correction.** A fact check (PR #8) found 25 days of abridged or
+   mislabeled text and corrected them to complete verbatim. The text policy is now
+   verbatim in full.
+2. **No-spend constraint.** The owner set a firm rule: no paid regeneration of images
+   (OpenAI) or audio (ElevenLabs). Because the images and audio were baked from the
+   pre-correction text, 21 of the 25 corrected days carry imperfect baked assets. We
+   do not re-bake them; the corrected text is carried in every slot's caption and
+   reply, and the worst-5 narration days post the image at night instead of the video.
 
-**Generation method:** ChatGPT Pro UI manually, prompt-by-prompt. Codex CLI / OpenAI API not used because (a) Codex CLI is text-only, no image gen, (b) free image APIs like Pollinations can't reliably render long quoted constitutional text legibly, (c) OpenAI Images API would be paid per image and V wants to avoid paid APIs unless necessary.
+## Deferred work: regenerate the 21 wrong-content assets
 
-**Output workflow (V's V2-then-archive rule):**
-- Nothing in the project folder gets deleted mid-process.
-- New PNGs land in `images_v2/` (created 2026-04-23) using filenames from each prompt section's FILENAME line (e.g. `day_01_preamble.png`).
-- The existing `images/` folder stays untouched — bot keeps using v1 images while v2 regeneration is in flight.
-- Once all 77 v2 images are generated and reviewed, V will give the green light to archive: move `images/` and v1 prompt files to `archive/`, then promote `images_v2/` and `image_mapping_v2.json` to canonical names.
+This is the real fix for the baked errors, deferred until spend is approved. The
+playbook below is preserved from the original v2 image generation so it can be
+repeated for just the affected days.
 
-**Tasks:**
-- Generate all 77 images in ChatGPT Pro UI (in progress — Day 11 test 2026-04-23 confirmed the realistic style works).
-- Save each as the exact filename specified in the corresponding section's FILENAME line, into `images_v2/`.
-- Build `image_mapping_v2.json` — straight 1:1 day → filename map (no reuse).
-- Verify with `python bot.py --preview --day N` once mapping is in place (will need a flag or symlink to point bot at v2 during testing).
-- After full review: promote v2 to canonical, archive v1.
+Affected days (wrong baked image and narration): 10, 23, 25, 29, 30, 37, 38, 41, 42,
+43, 58, 60, 61, 62, 63, 66, 68, 69, 70, 73, 75. The materially wrong five are 10, 23,
+58, 69, 75.
 
-Note: "one image per tweet" = one per day (77 images), since each daily post is one tweet (X Premium long tweets / Phase 3). Thread replies are not in scope.
+### Image regeneration playbook (one image per day)
 
-### Phase 2a — AI voice (ElevenLabs, Creator tier)
+- **Source of truth for prompts:** `chatgpt_image_prompts_v2.txt`, one prompt per day,
+  each embedding that day's actual constitutional text.
+- **Prompt template** (already baked into the v2 prompts):
+  - Parchment scroll on a wooden desk, American flags, oil lamp, leather books,
+    pocket watch, quill.
+  - Title and text from that day's `constitution_posts.json` entry.
+  - "The text must be completely readable, every single word must be accurate and legible."
+  - "Research how the constitution looks like in reality and make it look as close to real as possible." (Confirmed necessary to get the realistic style.)
+- **Generation method:** ChatGPT Pro UI, prompt by prompt, to avoid paid image APIs.
+  Codex CLI cannot generate images; free image APIs cannot render long quoted text
+  legibly; the OpenAI Images API is paid per image. Expect a typo retry loop (day 36
+  once produced "juaicial", fixed from a regenerated image in PR #7).
+- **Output rule (v2 then archive):** new PNGs land in `images_v2/` using the filename
+  from each prompt's FILENAME line; nothing is deleted mid process; promote and
+  archive only after review.
+- **Image policy for long days:** show a verbatim excerpt on the parchment; the full
+  text still rides in the thread and the video narration.
 
-V already has the ElevenLabs Creator subscription, so generation cost is covered.
+### Audio and video regeneration
 
-Tasks:
-- Pick a voice. Shortlist candidates: a grounded American baritone for the body text, optional second voice for the `📜 Day N/77 — [Section]` header. Lock one voice for the series so it sounds consistent.
-- Write a small script (`scripts/generate_audio.py`) that:
-  - Reads `constitution_posts.json`
-  - Calls the ElevenLabs API with the chosen voice_id
-  - Writes `audio/day_{N}.mp3` per day
-  - Skips if file already exists (idempotent re-runs)
-- Store the ElevenLabs API key in `.env` + GitHub Secrets (`ELEVENLABS_API_KEY`).
-- Generate all 77 files in one batch. Spot-check 5–10 for pronunciation of 18th-century spellings ("Senatours", "chuse") — the Creator tier supports pronunciation dictionaries if needed.
-- Commit audio files to the repo (check size — if >1GB cumulative, switch to Git LFS or S3).
-
-### Phase 2b — Short video: still image + subtle motion + voice
-
-The look V wants: the existing parchment image stays on screen with the tweet text overlaid, AI voice reads it aloud, and small elements animate — the paper flutters slightly as if in a breeze, and the quill/feather moves. It is a still image that feels alive, not a full AI-generated video.
-
-Recommended approach (free + deterministic, no paid video API needed):
-1. Start with the Phase 1 parchment image.
-2. Use ffmpeg to composite:
-   - Base layer: subtle loop of the image with a low-amplitude displacement map (simulates paper flutter) — a simple 2–4px horizontal sine wave over 3–5 seconds, looped.
-   - Optional overlay: small feather PNG with a gentle rotation + translation keyframe loop.
-   - Text overlay: tweet text using `drawtext` filter, burned-in subtitles synced to the audio.
-   - Audio track: the MP3 from Phase 2a.
-3. Output: vertical 1080x1920 MP4 (X/TikTok/Reels/Shorts friendly).
-
-Why ffmpeg vs Runway/Sora/Veo: zero cost, zero rate limits, fully reproducible, and the "still-with-subtle-motion" look is exactly what ffmpeg displacement + overlay filters do well. Heavy AI video tools would be overkill and would burn the subscription budget.
-
-Tasks:
-- Add `scripts/generate_video.py` that orchestrates ffmpeg for one day.
-- Create a reusable feather overlay PNG (transparent background).
-- Build one prototype video for Day 1 (Preamble) before batching all 77.
-- Review prototype with V. If the motion looks right, batch-generate all 77.
-- Commit to repo (or S3 bucket if size forces it).
-
-### Phase 2c — Wire it into the bot
-
-- Extend `platforms/x_twitter.py` to post media: attach the video (primary) and fall back to the image if video upload fails.
-- Add a feature flag in `state.json` (`media_mode`: `text` | `image` | `video`) so we can roll out gradually.
-- Default to `video` once Phase 2 lands. Keep `text` as a fallback path.
-- Update the GitHub Actions workflow to ensure ffmpeg is available in the runner (use `setup-ffmpeg` action or the default ubuntu-latest image).
-
-## Strategic Phase Context (unchanged)
-
-These are the longer-horizon phases this work feeds into. Not in scope for this weekend — kept here so the weekend work stays aligned with the destination.
-
-- **Phase 3 — X Premium + long tweets.** Every section fits in a single post, no threading needed. Subscribe once impressions justify it (~$8/mo).
-- **Phase 4 — Monetization.** X Creator Revenue Sharing (500 verified followers, 5M impressions/90 days). Newsletter and companion iOS app are later revenue paths.
-- **Phase 5 — Multi-platform.** Bluesky, Threads, TikTok, YouTube Shorts. The short video format generated this weekend is the asset that unlocks this without extra work.
-- **Phase 6 — Companion iOS app.** Long-term. Uses X audience for distribution.
-
-See `FUTURE_PLANNING.md` for detail on Phases 3–6.
+- Regenerate the affected days' narration with ElevenLabs (Creator tier), same voice
+  as the series for consistency. Spot check 18th century spellings.
+- Re-render those days' videos: `node video/scripts/render-all.mjs <day> ...`
+  (see `video/README.md`). After regeneration the worst-5 nights can revert to video.
 
 ## Architecture (current)
 
-- **Bot:** `bot.py` — loads section, formats tweet, posts via platform
-- **Platform:** `platforms/x_twitter.py` — X API v2 via Tweepy, auto-threading
-- **State:** `state.json` — tracks current day, auto-loops after 77
-- **Content:** `constitution_posts.json` — 77 daily sections
-- **Automation:** GitHub Actions cron at 10:00 UTC (5 AM ET)
-- **Secrets:** GitHub Secrets (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET). Add `ELEVENLABS_API_KEY` in Phase 2a.
-- **Repo:** https://github.com/vishutdhar/constitution_bot (private)
-- **X Account:** @USC1787
+- **Bot:** `bot.py`, pure file IO; all git lives in the workflows.
+- **Platform:** `platforms/x_twitter.py`, X API v2, threading, chunked video upload.
+- **State and fence:** `state.json` plus the claim fence in `claims/` (see
+  `docs/IDEMPOTENCY.md`).
+- **Content:** `constitution_posts.json`, 77 sections, verbatim.
+- **Media:** `images_v2/`, `audio_male/`, `audio_female/`, `video/`.
+- **Automation:** GitHub Actions, crons 12:23 / 16:47 / 20:11 UTC. Live workflow is
+  `daily_post.yml`; the gated 3-slot workflow is `daily_3slot.yml`.
+- **Repo:** https://github.com/vishutdhar/constitution_bot (private).
+- **X account:** @USC1787.
+
+## Longer horizon
+
+Growth, monetization, multi-platform, and the companion iOS app are tracked in
+`FUTURE_PLANNING.md`.

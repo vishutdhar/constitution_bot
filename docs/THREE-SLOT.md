@@ -14,13 +14,30 @@ morning post body, and the caption + reply thread on the image and video posts).
 The image and video assets are used as-is. This is the no-spend accuracy plan: even
 where an old baked image or narration is imperfect, the words people read are correct.
 
-## Accuracy exceptions
+Why this is needed: the verbatim text correction (PR #8, `9245e13`) fixed 25 days
+AFTER the `images_v2` cards and the ElevenLabs audio (hence the videos) were baked,
+so **21 of those 25 days have wrong baked content**. We do not re-bake them under the
+no-spend rule; the corrected copy is the fix. Regenerating those 21 assets is the
+deferred future work, documented in `docs/STATE.md` and `plan.md`. This 3-slot
+feature itself merged in PR #9 (`7dff8be`).
+
+The image lookup prefers `images_v2/` and falls back to the legacy `images/` set via
+`image_mapping`, so a day missing from `images_v2/` still resolves a card.
+
+## Accuracy exceptions and night degradation
+The night slot degrades to a safe option in three layers:
 - **Worst-5 night (days 10, 23, 58, 69, 75):** the video narration is materially
   wrong (old text baked before the verbatim correction), so at night these post the
   **image** instead of the video. See `WORST5_NIGHT_DAYS` in `bot.py`.
-- **No video available:** the night slot falls back to the image. Videos are
-  gitignored and not present on the CI runner yet, so until they are made available
-  (a GitHub Release asset), the night slot posts the image.
+- **No video file present:** the night slot falls back to the image. Videos are
+  gitignored and not present on the CI runner yet, so until they are published (a
+  GitHub Release asset), the night slot posts the image. The storage decision and its
+  options live in `docs/VIDEO-POSTING.md` (Production blocker). That blocker now gates
+  the night slot, not just the legacy `--video` path.
+- **Video rejected at upload:** when a video IS present but its upload or transcode is
+  rejected, the post degrades to the day's image (passed alongside the video as an
+  upload fallback) rather than to text only. The caption hook follows the actual media
+  kind, so a downgraded night image says "See", not "Hear".
 
 ## Idempotency
 Reuses the claim fence (`docs/IDEMPOTENCY.md`), generalized to per-(date, slot):
