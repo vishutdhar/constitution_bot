@@ -82,22 +82,36 @@ fires in between runs both and double posts.
 In this order the worst case between the two changes is a single missed window (neither
 poster active for one cron), never a duplicate.
 
-Preview any slot first without posting:
+Preview any slot first without posting (zero risk, no credentials needed):
 
 ```bash
 python bot.py --preview --slot morning|afternoon|night [--day N]
 ```
 
+Note on a LIVE pre-flip test: the 3-slot job's `if: vars.ENABLE_3SLOT == 'true'` gate
+also applies to a manual `workflow_dispatch` run, so you cannot test a single slot from
+the Actions tab while the variable is unset. To run a real one-off test WITHOUT enabling
+the scheduled crons, first widen the gate to
+`github.event_name == 'workflow_dispatch' || vars.ENABLE_3SLOT == 'true'` (not yet done).
+A manual test on a live day coexists with `daily_post.yml`'s post that day (you would see
+two formats of the same section); that is a deliberate one-off, not a loop.
+
 ## What we want to do next (intentions and backlog)
+
+Chosen immediate direction (2026-06-30): **prep go-live and a test post**. The three
+slots were validated locally with `--preview` for day 58 (text / image / worst-5 night
+correctly downgraded to image). The next concrete steps are the live-test gate change
+(see the runbook note above) and deciding video storage.
 
 Ordered by what unblocks the most:
 
-1. **Video storage for CI (blocks real night video).** The 77 rendered videos
-   (~1.1 GB) are gitignored and absent on the GitHub Actions runner, so the night
-   slot currently falls back to the image even for non worst-5 days. To post real
-   video, publish `video/videos/` as a **GitHub Release asset** and have the
-   workflow download the day's file before posting. Options compared in
-   `docs/VIDEO-POSTING.md` (Release asset vs LFS vs render in CI).
+1. **Video storage for CI (blocks real night video).** The 77 videos already exist
+   locally in `video/videos/` (~1.1 GB, rendered); they are gitignored and absent on the
+   GitHub Actions runner, so the night slot currently falls back to the image even for
+   non worst-5 days. To post real video, upload those existing files as a **GitHub Release
+   asset** (no re-render needed) and have the workflow download the day's file before
+   posting. Options compared in `docs/VIDEO-POSTING.md` (Release asset vs LFS vs render
+   in CI).
 2. **Flip to 3-slot** once video storage is decided (the runbook above).
 3. **Deferred, needs budget: regenerate the 21 wrong-content assets.** This is the
    real fix for the baked errors. It requires paid OpenAI gpt-image-2 (images) and
