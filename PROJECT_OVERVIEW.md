@@ -30,11 +30,13 @@ Premium, a corrected clause usually fits a single reply.
 
 ### Posting is duplicate free by design
 
-Because posting is irreversible, the bot records intent before the side effect. It
-writes and pushes a claim file (`claims/<date>.json`, or `claims/<date>__<slot>.json`
-for 3-slot) to `origin/main` BEFORE posting; the push is the mutex. State advances
-only after a slot actually posts. The non-idempotent `create_tweet` lead is never
-auto-retried. Full model in `docs/IDEMPOTENCY.md`.
+The scheduled workflows post through a claim fence. Because posting is irreversible,
+the workflow runs `--claim` first, which writes and pushes a claim file
+(`claims/<date>.json`, or `claims/<date>__<slot>.json` for 3-slot) to `origin/main`
+BEFORE posting; the push is the mutex. It then runs `--post-claimed`. State advances
+only after a slot actually posts, and the non-idempotent `create_tweet` lead is never
+auto-retried. A bare local `python bot.py` does not claim; it uses the simpler log
+based `already_posted_today()` guard. Full model in `docs/IDEMPOTENCY.md`.
 
 ## What is in the 77 days?
 

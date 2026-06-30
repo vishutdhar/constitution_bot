@@ -23,10 +23,15 @@ poster is live. See `docs/STATE.md` for the go-live runbook (you must also disab
 
 ## How it stays duplicate free
 
-Posting to X is irreversible, so the bot records **intent before the side effect**:
-it writes and pushes a claim file (`claims/<date>.json`, or `claims/<date>__<slot>.json`
-for 3-slot) to `origin/main` BEFORE posting, and the fast forward push is the mutex.
-The non-idempotent `create_tweet` lead is never auto-retried. Full model in
+The scheduled GitHub Actions workflows post through a **claim fence**: they run
+`--claim`, which writes and pushes a claim file (`claims/<date>.json`, or
+`claims/<date>__<slot>.json` for 3-slot) to `origin/main` BEFORE posting, with the
+fast forward push as the mutex, and then `--post-claimed`. The non-idempotent
+`create_tweet` lead is never auto-retried.
+
+A bare local `python bot.py` does NOT use the claim fence; it posts through the default
+path guarded only by the log based `already_posted_today()` check, which is enough for
+one-off manual posting but is not the durable cross-run mutex. Full model in
 `docs/IDEMPOTENCY.md`.
 
 ## Quick start
