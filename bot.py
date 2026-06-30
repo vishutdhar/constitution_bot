@@ -26,6 +26,18 @@ from platforms.x_twitter import XTwitterPlatform, weighted_len
 # Paths
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).parent
+
+# Load a local .env (if present) so credentials placed in .env work without a manual
+# export. python-dotenv is a declared dependency. In CI the X_* secrets are already
+# real env vars and there is no .env file; load_dotenv defaults to override=False, so
+# it never clobbers existing variables and CI is unaffected.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
+
 POSTS_FILE = BASE_DIR / "constitution_posts.json"
 STATE_FILE = BASE_DIR / "state.json"
 LOG_FILE = BASE_DIR / "post_log.json"

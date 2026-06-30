@@ -1,9 +1,18 @@
-# Future Planning — @USC1787
+# Future Planning, @USC1787
 
-## Phase 1: Complete the 77-Day Series (Current)
-- Finish posting all 77 sections of the Constitution
-- Result: permanent, browsable archive of the full Constitution on the profile
-- Currently on Day 30 (as of March 17, 2026) — ~47 days remaining
+> Status note (2026-06-30): the 77-day series has completed at least one loop
+> (state.json day 57). The current operating model is the **3-slot revamp**: the
+> same 77 sections recirculate, each posted three ways per day (morning text,
+> afternoon image, night video). That code is built and merged but gated off. For
+> the authoritative state and the go-live runbook, read `docs/STATE.md`. The growth,
+> monetization, and multi-platform thinking below remains the long horizon plan.
+
+## Phase 1: Complete the 77-Day Series (done, now looping)
+- All 77 sections post and the series loops, giving a permanent browsable archive.
+- The post-series strategy is no longer "replace the series with new content types".
+  It is to recirculate the 77 sections across three formats per day (3-slot), which
+  triples placements without new content. The content ideas in Phase 2 below are
+  additive options on top of that, not a replacement for the series.
 
 ## Phase 2: Post-Day 77 Content Strategy
 Ideas for ongoing daily content after the initial series:
@@ -43,7 +52,9 @@ Ideas for ongoing daily content after the initial series:
 - **Replies matter** — X saw +21% reply growth in 2026. Engaging in replies builds community and signals to the algorithm.
 
 ### Posting Schedule
-- Current: 13:00 UTC (9 AM EDT) daily — this is in the optimal window
+- Current live schedule: three off the hour UTC crons, 12:23 / 16:47 / 20:11. On the
+  live single poster these are one post plus two idempotent retries. Under 3-slot they
+  become three distinct posts (text 12:23, image 16:47, video 20:11).
 - Best days: Tuesday, Wednesday, Thursday have highest engagement
 - Best times: 9 AM - 11 AM audience timezone
 - Worst days: Saturday and Friday — consider skipping or posting lighter content
@@ -101,13 +112,28 @@ Note: multi-platform should wait until X audience is established. Spreading too 
 - Competitive landscape: National Constitution Center app exists but is basic; ASU's CivEd app covers broader civics
 
 ## Technical Backlog
-- Decide what the bot does after Day 77 (new content engine vs. loop)
-- Add Bluesky platform integration
-- Add artifact retention policies to workflows to prevent GitHub storage buildup
-- Add alt text to images for accessibility + algorithmic reach
-- Consider adding native video generation (animated text reveals of constitutional clauses)
-- Build "on this day" content database for Phase 2
-- Pin an introductory thread on the profile explaining the series
+Done since this list was written:
+- Native video generation: done. 77 Remotion videos render from the per day assets.
+- Decide what the bot does after day 77: decided. It loops and recirculates via 3-slot.
+
+Open, ordered by what unblocks the most (see `docs/STATE.md` for detail):
+- Video storage for CI: the rendered videos are gitignored and absent on the runner,
+  so the 3-slot night slot falls back to image. Publish `video/videos/` as a GitHub
+  Release asset and download per day in the workflow. Options in `docs/VIDEO-POSTING.md`.
+- Go live with 3-slot: disable `daily_post.yml` FIRST, then set `ENABLE_3SLOT=true`
+  (disabling first means the worst case is one missed window, never a double post).
+- Deferred, needs budget: regenerate the 21 wrong-content images and audio (baked from
+  pre-correction text) and re-render their videos. No-spend rule blocks this until
+  approved. Playbook preserved in `plan.md`.
+- Add alt text to images for accessibility and reach (note: editing images is fine;
+  re-baking their text content is the part gated by no-spend).
+- Add Bluesky platform integration (separate unmerged branch).
+- Add artifact retention policies to workflows to prevent GitHub storage buildup.
+- Build "on this day" content database for the Phase 2 additive content.
+- Pin an introductory thread on the profile explaining the series.
+
+Note for the monetization math below: 3-slot roughly triples daily post volume, which
+changes the impression and engagement assumptions in the timeline.
 
 ## Sources
 - [Buffer: Best Time to Post on X 2026](https://buffer.com/resources/best-time-to-post-on-twitter-x/)

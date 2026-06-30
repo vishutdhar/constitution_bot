@@ -16,6 +16,15 @@ text baked into the artwork. On top we add only chrome: a header
 (`THE U.S. CONSTITUTION` / `Day N of 77`) and a footer (`@USC1787` + that day's
 hashtags).
 
+> Content accuracy warning. The `images_v2` cards and the `audio_male` narration were
+> baked BEFORE the verbatim text correction (PR #8), so **21 days carry wrong baked
+> text** (see `docs/STATE.md` for the list). Re-rendering today reproduces that wrong
+> content. The five materially wrong narration days (10, 23, 58, 69, 75) are NOT
+> posted as video at night by the bot. Fixing this for real means regenerating those
+> images and audio first, which is **deferred under the no-spend rule** (it needs paid
+> OpenAI and ElevenLabs). The playbook is in `plan.md`. Until then the bot carries the
+> corrected text in the post copy and uses these videos as-is.
+
 ## Setup
 
 ```bash
@@ -69,4 +78,8 @@ Regenerate with `python3 scripts/gen-days.py`.
 - **Pre-render locally, not in CI.** The daily posting bot runs on GitHub Actions;
   installing Remotion + headless Chrome there is avoidable. Render the 77 videos
   here and let the bot upload the pre-rendered `videos/day_NN.mp4` for the day.
+- **Production storage gap.** Because `videos/` is gitignored, the rendered files are
+  NOT on the CI runner, so the 3-slot night slot falls back to the image until the
+  videos are published (a GitHub Release asset). See the Production blocker in
+  `docs/VIDEO-POSTING.md` and the night degradation layers in `docs/THREE-SLOT.md`.
 - `videos/`, `out/`, `node_modules/`, and the `public/` symlinks are gitignored.

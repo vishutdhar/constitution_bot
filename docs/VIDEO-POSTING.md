@@ -5,6 +5,15 @@ to the day's X post instead of the static image. It is **opt-in and off by
 default**, so existing image-posting behavior is unchanged until explicitly
 enabled.
 
+> Two ways to post video now exist. This doc covers the **legacy single-post path**
+> (`--video` / `POST_VIDEO`) on `daily_post.yml`. The **go-forward video path is the
+> 3-slot night slot** (`docs/THREE-SLOT.md`), gated by `ENABLE_3SLOT`, not
+> `POST_VIDEO`. The upload mechanics below are shared by both. Two differences in the
+> slot path: the night slot has a worst-5 exception (days 10, 23, 58, 69, 75 post the
+> image, since their narration is wrong), and it passes the day's image as an upload
+> fallback so a rejected video degrades to the image. The legacy `--video` path has no
+> worst-5 guard.
+
 ## What changed
 
 - `platforms/x_twitter.py` — new `_upload_video()` uses X's **chunked** upload
@@ -47,8 +56,10 @@ to the image — it never fails the run just because a video is absent.
 ## Production blocker: where do the videos live?
 
 The 77 rendered videos (~1.1 GB) are **gitignored**. The daily job runs on
-GitHub Actions, so the files are not present there yet. Pick one before enabling
-`POST_VIDEO` in CI:
+GitHub Actions, so the files are not present there yet. This blocker is system wide:
+it gates the 3-slot **night slot** too, not just the legacy `POST_VIDEO` path, so
+until it is resolved the night slot falls back to the image even on non worst-5 days.
+Pick one before enabling video in CI:
 
 | Option | Notes |
 |---|---|

@@ -81,8 +81,50 @@ advance isn't persisted, so the *next day* may re-post the same section once
 finalize). Accepted for a low-stakes bot; eliminating it would require deriving
 progression purely from the claim history (a larger change).
 
+## 3-slot generalization (per-(date,slot))
+
+The 3-slot feature (`docs/THREE-SLOT.md`) reuses this exact fence, generalized from
+one claim per date to one claim per `(date, slot)`. The core helpers
+(`claim_status`, `should_skip_for_claim`, the status list above) are shared, so the
+no-duplicate-beats-no-miss semantics carry over unchanged. The differences:
+
+- **Per slot claim key.** Each slot writes `claims/<date>__<slot>.json` and pushes it
+  before its post. The three slots write three different keys, so they are fenced
+  independently.
+- **Day pin.** The section day for a date is pinned once in `claims/<date>__pin.json`
+  the first time any slot for that date is claimed; later slots read it, so all three
+  slots of a date post the same section even across a midnight UTC flip.
+- **State advances once per date, only AFTER a slot posts.** `run_post_slot` calls
+  `save_state` after a successful post, guarded by the pin record's status flipping
+  from `pinned` to `advanced`, NOT by reading `state.json`'s value. Consequences: a day
+  where every slot fails advances nothing and is retried the next date (so an outage
+  never silently skips a section); and the advance sets the next day unconditionally,
+  which self heals a wrapped `current_day` (for example `total + 1` left by the legacy
+  path) instead of freezing on one section. The legacy finalize-push residual below
+  still applies here: the advance is persisted only by the finalize commit, so if every
+  successful slot's finalize push fails, the next date re-pins the old `current_day` and
+  repeats the section (a cross-date repeat, not a same-day duplicate).
+- **Finalize ignores stale log rows.** A slot's finalize only counts `post_log.json`
+  rows newer than that slot's current claim (`updated_at`). So a stale `failed` row
+  from an earlier attempt cannot overwrite the safe `posted_unknown` default and
+  reopen a possibly live slot, which would risk a duplicate on the next retry.
+
+**Second workflow.** `.github/workflows/daily_3slot.yml` has the same claim / post /
+finalize shape as `daily_post.yml` and uses a date-wide concurrency group so the three
+slots run one at a time. Its claim step stages `claims/ state.json`, but at claim time
+`state.json` is unchanged: `run_claim_slot` only writes the pin and slot claims, so the
+staged `state.json` is harmless (effectively pin-only). The day advance is written later
+by `run_post_slot` after a successful post and becomes durable only when the finalize
+step pushes. It is gated by `if: vars.ENABLE_3SLOT == 'true'`.
+
+**Go-live coupling.** Both workflows fire on the same three crons but write different
+claim keys, so the fence does NOT make them exclude each other. To switch posters
+without double posting, disable `daily_post.yml` FIRST, then set `ENABLE_3SLOT=true`
+(disabling first means the worst case is one missed window, never a duplicate).
+
 ## Manual overrides
 `--day`, `--preview`, `--validate`, `--reset` bypass the claim gate exactly as
-they bypass `already_posted_today()`. `already_posted_today()` is kept as a
-second-line guard inside the default/post path for back-compat with legacy log
-rows.
+they bypass `already_posted_today()`. The slot modes `--claim`, `--post-claimed`,
+`--finalize` (with `--slot` and `--date`) are the 3-slot CLI surface.
+`already_posted_today()` is kept as a second-line guard inside the default/post path
+for back-compat with legacy log rows.
