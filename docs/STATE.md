@@ -42,15 +42,22 @@ where a baked image or narration is imperfect, the words a reader reads are corr
 - **Live poster: `daily_post.yml`** posts ONE section per UTC day. It fires on three
   off the hour crons (`23 12`, `47 16`, `11 20` UTC); the first window to win the
   per day claim posts, the other two are idempotent retries.
-- **`daily_3slot.yml` is gated by the repo variable `ENABLE_3SLOT`** (`if:
-  vars.ENABLE_3SLOT == 'true'`). That variable is currently **unset**, so the
+- **`daily_3slot.yml` scheduled runs are gated by the repo variable `ENABLE_3SLOT`**
+  (`if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+  || vars.ENABLE_3SLOT == 'true'`). That variable is currently **unset**, so the
   3-slot job triggers on schedule but skips. Verified empty via
   `gh api repos/vishutdhar/constitution_bot/actions/variables`.
+- **Manual test escape hatch (shipped PR #13):** a `workflow_dispatch` run from the
+  **main** branch runs the job even while `ENABLE_3SLOT` is unset, so one slot can be
+  tested live before the crons are armed. Dispatch is restricted to the main ref
+  because the claim step does `git push origin HEAD:main`; allowing an arbitrary
+  branch would let that push fast-forward main to unreviewed commits.
 - Both workflows use the **same three crons**. They write **different** claim keys
   (`<date>.json` for legacy, `<date>__<slot>.json` for 3-slot), so the claim fence
   does NOT make them exclude each other. Running both at once double posts. This is
   why go-live requires disabling `daily_post.yml`, not just enabling the variable.
-- `state.json` is at day 57 (it loops 1..77).
+- `state.json` is at day 59 (it loops 1..77); `daily_post.yml` posted day 58 on
+  2026-07-01.
 
 ## The accuracy situation (why the copy matters)
 
@@ -88,13 +95,42 @@ Preview any slot first without posting (zero risk, no credentials needed):
 python bot.py --preview --slot morning|afternoon|night [--day N]
 ```
 
-Note on a LIVE pre-flip test: the 3-slot job's `if: vars.ENABLE_3SLOT == 'true'` gate
-also applies to a manual `workflow_dispatch` run, so you cannot test a single slot from
-the Actions tab while the variable is unset. To run a real one-off test WITHOUT enabling
-the scheduled crons, first widen the gate to
-`github.event_name == 'workflow_dispatch' || vars.ENABLE_3SLOT == 'true'` (not yet done).
-A manual test on a live day coexists with `daily_post.yml`'s post that day (you would see
-two formats of the same section); that is a deliberate one-off, not a loop.
+LIVE pre-flip test (the gate now allows this, PR #13): from the Actions tab open
+**Daily Constitution Post (3-slot)** -> Run workflow, leave the branch on **main**,
+pick a slot, Run. It runs even while `ENABLE_3SLOT` is unset (main ref only).
+Precondition, enforced by the workflow's **Pre-flip test fence** step: run it AFTER
+that day's normal `daily_post` post has gone out (or after `daily_post.yml` has been
+disabled). Triggered too early, the run refuses with instructions instead of posting.
+
+What a manual test actually does (verified against `bot.py`, not assumed):
+- It is a **real live post to @USC1787**, not a dry run. The `--preview` command above
+  is the no-post path.
+- The section is pinned from `state.json.current_day`, so the test posts the **next**
+  day in sequence and advances state by one. It does **not** reprint the section
+  `daily_post.yml` already handled today. Example: with state at 59 (day 58 posted),
+  a test posts day 59 and advances to 60, so the next `daily_post.yml` resumes at 60
+  and day 59 appears only via the test.
+- Timing vs `daily_post.yml` (still enabled during the test): the two posters fence
+  each other only by pushing to main, and `daily_post` sees a 3-slot post only after
+  its `post_log.json` is finalized. A manual test that OVERLAPS a `daily_post` run
+  (its 12:23 / 16:47 / 20:11 UTC windows) could pin and post the SAME day twice.
+  This is enforced mechanically, not by operator discipline: the workflow's
+  **Pre-flip test fence** step allows a manual test only when it provably cannot
+  collide. Either `daily_post.yml` is disabled in Actions with zero unfinished
+  runs (both checked via the API; disabling stops new triggers only, so a run
+  already queued or started can still post) and no legacy claim today, or BOTH
+  of: today's legacy claim
+  (`claims/<date>.json`) is terminal `posted*` (then every later `daily_post`
+  window hard-skips via `should_skip_for_claim`) AND `state.json.current_day` has
+  advanced past the legacy-claimed day (legacy advances state only on full
+  success, so `posted_unknown`/`posted_partial` can leave `current_day` pointing
+  at a possibly-live section that the test would repost). The claim step also
+  re-checks that UTC midnight did not flip after the fence ran. Practical rule:
+  run the test after that day's normal post has gone out; the fence fails fast
+  with instructions otherwise. The fence lives only in `daily_3slot.yml` (the
+  live poster is untouched) and self-deactivates at go-live (`ENABLE_3SLOT` set
+  skips it). Outside that overlap there is no duplicate/loop risk (distinct
+  claim keys).
 
 ## What we want to do next (intentions and backlog)
 
