@@ -141,14 +141,16 @@ correctly downgraded to image). The next concrete steps are the live-test gate c
 
 Ordered by what unblocks the most:
 
-1. **Video storage for CI (blocks real night video).** The 77 videos already exist
-   locally in `video/videos/` (~1.1 GB, rendered); they are gitignored and absent on the
-   GitHub Actions runner, so the night slot currently falls back to the image even for
-   non worst-5 days. To post real video, upload those existing files as a **GitHub Release
-   asset** (no re-render needed) and have the workflow download the day's file before
-   posting. Options compared in `docs/VIDEO-POSTING.md` (Release asset vs LFS vs render
-   in CI).
-2. **Flip to 3-slot** once video storage is decided (the runbook above).
+1. **DONE (2026-07-01): video storage for CI.** The 77 videos are published as
+   assets on the `videos-v1` GitHub Release (plus `SHA256SUMS.txt`), and
+   `daily_3slot.yml`'s "Fetch night video" step downloads the pinned day's file
+   before the night post (fetch failure = image fallback, never a lost slot).
+   Details and asset-replacement notes in `docs/VIDEO-POSTING.md` (Production
+   storage).
+2. **Flip to 3-slot** (the runbook above). Recommended first: one manual night
+   slot test via workflow_dispatch, which also confirms the X API tier accepts
+   video upload (never yet proven on this account; a rejected upload degrades
+   to the image, so the test is safe either way).
 3. **Deferred, needs budget: regenerate the 21 wrong-content assets.** This is the
    real fix for the baked errors. It requires paid OpenAI gpt-image-2 (images) and
    ElevenLabs (audio), then re-rendering those videos. The image generation
