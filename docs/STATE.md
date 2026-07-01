@@ -39,25 +39,33 @@ where a baked image or narration is imperfect, the words a reader reads are corr
 
 ## Current reality (what is actually running)
 
-- **Live poster: `daily_post.yml`** posts ONE section per UTC day. It fires on three
-  off the hour crons (`23 12`, `47 16`, `11 20` UTC); the first window to win the
-  per day claim posts, the other two are idempotent retries.
-- **`daily_3slot.yml` scheduled runs are gated by the repo variable `ENABLE_3SLOT`**
-  (`if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-  || vars.ENABLE_3SLOT == 'true'`). That variable is currently **unset**, so the
-  3-slot job triggers on schedule but skips. Verified empty via
-  `gh api repos/vishutdhar/constitution_bot/actions/variables`.
-- **Manual test escape hatch (shipped PR #13):** a `workflow_dispatch` run from the
-  **main** branch runs the job even while `ENABLE_3SLOT` is unset, so one slot can be
-  tested live before the crons are armed. Dispatch is restricted to the main ref
-  because the claim step does `git push origin HEAD:main`; allowing an arbitrary
-  branch would let that push fast-forward main to unreviewed commits.
-- Both workflows use the **same three crons**. They write **different** claim keys
-  (`<date>.json` for legacy, `<date>__<slot>.json` for 3-slot), so the claim fence
-  does NOT make them exclude each other. Running both at once double posts. This is
-  why go-live requires disabling `daily_post.yml`, not just enabling the variable.
-- `state.json` is at day 59 (it loops 1..77); `daily_post.yml` posted day 58 on
-  2026-07-01.
+- **LIVE poster: `daily_3slot.yml` (3-slot), since 2026-07-01 ~21:30 UTC.** One
+  section per UTC day posted three ways: morning text (12:23 UTC), afternoon image
+  (16:47), night video (20:11, worst-5 days post the image). The go-live flip:
+  `daily_post.yml` was disabled FIRST (`disabled_manually`, zero in-flight runs
+  verified), then the repo variable `ENABLE_3SLOT` was set to `true`. Verified via
+  `gh api .../actions/workflows` and `.../actions/variables`.
+- **`daily_post.yml` (legacy single-post) is DISABLED**, kept as the rollback path:
+  `gh variable set ENABLE_3SLOT --body false` + `gh workflow enable daily_post.yml`
+  reverts to the pre-flip world with no code change.
+- **Gate on `daily_3slot.yml`:** `(schedule && vars.ENABLE_3SLOT == 'true') ||
+  (workflow_dispatch && github.ref == 'refs/heads/main')`. Dispatch is restricted to
+  the main ref because the claim step does `git push origin HEAD:main`; an arbitrary
+  branch could fast-forward main to unreviewed commits. The Pre-flip test fence step
+  is now inert (it only runs while `ENABLE_3SLOT` is not `true`).
+- **Go-live validation (2026-07-01):** manual night-slot dispatch posted day 59
+  (Amendment XIII) as a real video tweet
+  (https://x.com/USC1787/status/2072430316728300002): fence passed, `day_59.mp4`
+  (21M) fetched from the `videos-v1` release, video upload accepted by the X API
+  tier (previously unproven), reply thread complete, state advanced. First
+  scheduled 3-slot day is 2026-07-02 (day 60).
+- Both workflows share the **same three crons** and write **different** claim keys
+  (`<date>.json` legacy, `<date>__<slot>.json` 3-slot), so the claim fence does NOT
+  make them exclude each other; running both at once double posts. That is why the
+  flip disabled `daily_post.yml` before setting the variable, and why rollback must
+  do the reverse (unset the variable before re-enabling `daily_post.yml`).
+- `state.json` is at day 60 (it loops 1..77): `daily_post.yml` posted day 58 on
+  2026-07-01, the go-live test posted day 59 (video only).
 
 ## The accuracy situation (why the copy matters)
 
@@ -134,23 +142,24 @@ What a manual test actually does (verified against `bot.py`, not assumed):
 
 ## What we want to do next (intentions and backlog)
 
-Chosen immediate direction (2026-06-30): **prep go-live and a test post**. The three
-slots were validated locally with `--preview` for day 58 (text / image / worst-5 night
-correctly downgraded to image). The next concrete steps are the live-test gate change
-(see the runbook note above) and deciding video storage.
+GO-LIVE COMPLETE (2026-07-01): gate change + fence (PR #13), video storage (PR #14),
+manual night-slot live test (day 59 video), then the flip (disable `daily_post.yml`,
+set `ENABLE_3SLOT=true`). See "Current reality" above.
 
 Ordered by what unblocks the most:
 
-1. **DONE (2026-07-01): video storage for CI.** The 77 videos are published as
+1. **Watch the first scheduled 3-slot day (2026-07-02, day 60):** morning text at
+   12:23 UTC, afternoon image at 16:47, night video at 20:11. Check each run is
+   green, one tweet per slot on @USC1787, `post_log.json` gains three entries for
+   the date, and `state.json` advances exactly once (to 61). Rollback if needed:
+   `gh variable set ENABLE_3SLOT --body false`, then `gh workflow enable
+   daily_post.yml`.
+2. **DONE (2026-07-01): video storage for CI.** The 77 videos are published as
    assets on the `videos-v1` GitHub Release (plus `SHA256SUMS.txt`), and
    `daily_3slot.yml`'s "Fetch night video" step downloads the pinned day's file
    before the night post (fetch failure = image fallback, never a lost slot).
    Details and asset-replacement notes in `docs/VIDEO-POSTING.md` (Production
    storage).
-2. **Flip to 3-slot** (the runbook above). Recommended first: one manual night
-   slot test via workflow_dispatch, which also confirms the X API tier accepts
-   video upload (never yet proven on this account; a rejected upload degrades
-   to the image, so the test is safe either way).
 3. **Deferred, needs budget: regenerate the 21 wrong-content assets.** This is the
    real fix for the baked errors. It requires paid OpenAI gpt-image-2 (images) and
    ElevenLabs (audio), then re-rendering those videos. The image generation
