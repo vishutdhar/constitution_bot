@@ -107,15 +107,19 @@ What a manual test actually does (verified against `bot.py`, not assumed):
   `daily_post.yml` already handled today. Example: with state at 59 (day 58 posted),
   a test posts day 59 and advances to 60, so the next `daily_post.yml` resumes at 60
   and day 59 appears only via the test.
-- Timing caveat vs `daily_post.yml` (still enabled during the test): the two posters
-  fence each other only by pushing to main, and `daily_post` sees a 3-slot post only
-  after its `post_log.json` is finalized. A manual test that OVERLAPS a `daily_post`
-  run (its 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice.
-  So trigger the test well clear of those minutes, or after `daily_post` has already
-  posted for the day (it then skips via `already_posted_today()`). Outside that
-  overlap there is no duplicate/loop risk (distinct claim keys). A full cross-workflow
-  claim fence is deferred: go-live disables `daily_post.yml`, which removes the hazard
-  permanently, so it is not worth touching the live poster for a temporary test hatch.
+- Timing vs `daily_post.yml` (still enabled during the test): the two posters fence
+  each other only by pushing to main, and `daily_post` sees a 3-slot post only after
+  its `post_log.json` is finalized. A manual test that OVERLAPS a `daily_post` run
+  (its 12:23 / 16:47 / 20:11 UTC windows) could pin and post the SAME day twice.
+  This is enforced mechanically, not by operator discipline: the workflow's
+  **Pre-flip test fence** step refuses a manual test until today's legacy claim
+  (`claims/<date>.json`) is in a terminal `posted*` state, after which every later
+  `daily_post` window hard-skips (`should_skip_for_claim`) and the overlap cannot
+  occur. Practical rule: run the test after that day's normal post has gone out; the
+  fence fails fast with instructions otherwise. The fence lives only in
+  `daily_3slot.yml` (the live poster is untouched) and self-deactivates at go-live
+  (`ENABLE_3SLOT` set skips it, and `daily_post.yml` is disabled then anyway).
+  Outside that overlap there is no duplicate/loop risk (distinct claim keys).
 
 ## What we want to do next (intentions and backlog)
 

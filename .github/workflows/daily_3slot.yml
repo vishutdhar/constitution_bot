@@ -18,9 +18,11 @@
 # CAUTION while daily_post.yml is still enabled: the two posters fence each other
 # only by pushing to main, and daily_post notices a 3-slot post only after its
 # post_log.json is finalized. A manual test that overlaps a daily_post run (its
-# 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice. Trigger
-# the test well clear of those windows, or after daily_post has already posted for
-# the day (it then skips via already_posted_today).
+# 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice. The
+# "Pre-flip test fence" step below enforces the safe ordering mechanically: a
+# manual test is refused until today's legacy claim (claims/<date>.json) is in a
+# terminal posted* state, after which every later daily_post window hard-skips
+# and the overlap cannot occur.
 # To go live: set ENABLE_3SLOT=true AND disable daily_post.yml (else double posts).
 #
 # Idempotency reuses the per-(date,slot) claim fence (see docs/IDEMPOTENCY.md):
@@ -95,6 +97,36 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      # Pre-flip test fence: while daily_post.yml is still live, a manual test may
+      # only run AFTER today's legacy post is terminal. Reason: daily_post notices
+      # a 3-slot post only once post_log.json lands with our FINALIZE push, minutes
+      # after our claim push, so a legacy cron firing inside that window could
+      # claim and post the SAME pinned day. Once claims/<date>.json is terminal
+      # (posted*), every later legacy window hard-skips (should_skip_for_claim in
+      # bot.py) and the race is closed. Statuses 'none', 'claimed' (legacy may be
+      # mid-post right now) and 'failed' (a later legacy window will retry) are all
+      # unsafe, so anything non-terminal is refused. Self-deactivating: go-live
+      # sets ENABLE_3SLOT, which skips this step (daily_post.yml is disabled then).
+      - name: Pre-flip test fence
+        if: github.event_name == 'workflow_dispatch' && vars.ENABLE_3SLOT != 'true'
+        run: |
+          DATE="$(date -u +%F)"
+          CLAIM="claims/$DATE.json"
+          if [ ! -f "$CLAIM" ]; then
+            STATUS="none"
+          else
+            STATUS="$(jq -r '.status // "unknown"' "$CLAIM" 2>/dev/null || echo unknown)"
+          fi
+          case "$STATUS" in
+            posted|posted_partial|posted_unknown)
+              echo "Legacy post for $DATE is terminal ($STATUS); safe to test." ;;
+            *)
+              echo "::error::Refusing the manual test: today's legacy claim status is '$STATUS'."
+              echo "Run the test after daily_post.yml has posted today ($CLAIM shows posted*)."
+              echo "If daily_post.yml is already disabled for go-live, set ENABLE_3SLOT=true instead."
+              exit 1 ;;
+          esac
 
       # 1) Claim this slot BEFORE posting. The push is the fence. The day pin and
       #    the state advance (state.json) are part of this durable commit.
