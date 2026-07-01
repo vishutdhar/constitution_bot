@@ -107,8 +107,15 @@ What a manual test actually does (verified against `bot.py`, not assumed):
   `daily_post.yml` already handled today. Example: with state at 59 (day 58 posted),
   a test posts day 59 and advances to 60, so the next `daily_post.yml` resumes at 60
   and day 59 appears only via the test.
-- No duplicate/loop risk with `daily_post.yml`: different claim keys, and once a slot
-  posts, `already_posted_today()` makes `daily_post.yml` skip that UTC day.
+- Timing caveat vs `daily_post.yml` (still enabled during the test): the two posters
+  fence each other only by pushing to main, and `daily_post` sees a 3-slot post only
+  after its `post_log.json` is finalized. A manual test that OVERLAPS a `daily_post`
+  run (its 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice.
+  So trigger the test well clear of those minutes, or after `daily_post` has already
+  posted for the day (it then skips via `already_posted_today()`). Outside that
+  overlap there is no duplicate/loop risk (distinct claim keys). A full cross-workflow
+  claim fence is deferred: go-live disables `daily_post.yml`, which removes the hazard
+  permanently, so it is not worth touching the live poster for a temporary test hatch.
 
 ## What we want to do next (intentions and backlog)
 

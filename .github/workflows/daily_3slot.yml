@@ -9,11 +9,18 @@
 #
 # EXCEPTION: a manual "Run workflow" (workflow_dispatch) from the main branch
 # always runs, even while ENABLE_3SLOT is unset, so a single slot can be tested
-# live without arming the crons. (Dispatch from any other ref is ignored so the
-# claim's `git push origin HEAD:main` can never fast-forward main to an unreviewed
-# branch.) A manual test is a REAL run: it posts to the live account and advances
-# state.json by one section, so it consumes the next day in sequence (see
+# live without arming the crons. Dispatch from any other ref is always ignored so
+# the claim's `git push origin HEAD:main` can never fast-forward main to an
+# unreviewed branch. A manual test is a REAL run: it posts to the live account and
+# advances state.json by one section, so it consumes the next day in sequence (see
 # docs/STATE.md). It does not reprint the section daily_post.yml handled today.
+#
+# CAUTION while daily_post.yml is still enabled: the two posters fence each other
+# only by pushing to main, and daily_post notices a 3-slot post only after its
+# post_log.json is finalized. A manual test that overlaps a daily_post run (its
+# 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice. Trigger
+# the test well clear of those windows, or after daily_post has already posted for
+# the day (it then skips via already_posted_today).
 # To go live: set ENABLE_3SLOT=true AND disable daily_post.yml (else double posts).
 #
 # Idempotency reuses the per-(date,slot) claim fence (see docs/IDEMPOTENCY.md):
@@ -48,14 +55,18 @@ permissions:
 jobs:
   post:
     runs-on: ubuntu-latest
-    # Scheduled runs stay gated on the repo variable. A manual dispatch also runs
-    # while the variable is unset, but ONLY from the main ref: the claim step does
-    # `git push origin HEAD:main`, so allowing dispatch from an arbitrary branch
-    # could fast-forward main to that branch's unreviewed commits. Restricting the
-    # bypass to refs/heads/main keeps the manual test on reviewed code.
+    # Two independent arms, kept separate so a manual dispatch is ALWAYS restricted
+    # to the main ref (even after go-live) and a scheduled run always requires the
+    # variable:
+    #   - schedule: runs only when ENABLE_3SLOT == 'true' (the go-live switch).
+    #   - workflow_dispatch: runs only from refs/heads/main, regardless of the
+    #     variable, so a single slot can be tested before the crons are armed.
+    # The ref restriction matters because the claim step does
+    # `git push origin HEAD:main`: a dispatch from a branch ahead of main would
+    # otherwise fast-forward main to that branch's unreviewed commits.
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-      || vars.ENABLE_3SLOT == 'true'
+      (github.event_name == 'schedule' && vars.ENABLE_3SLOT == 'true')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
 
     steps:
       - name: Resolve slot
