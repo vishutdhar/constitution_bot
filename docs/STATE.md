@@ -5,22 +5,24 @@ where it is going. If you are picking this up in a new session, read this file,
 then `docs/THREE-SLOT.md` for the feature detail and `docs/IDEMPOTENCY.md` for
 the posting safety model.
 
-Repo: `vishutdhar/constitution_bot` (private). X account: **@USC1787**.
-Last updated: 2026-06-30. Main tip at that time: `7dff8be`.
+Repo: `vishutdhar/constitution_bot` (**public**; release assets and this file are
+world readable). X account: **@USC1787**.
+Last updated: 2026-07-01, after the 3-slot go-live.
 
 ## TL;DR
 
 - The bot posts the U.S. Constitution one section per day across **77 days**, then loops.
-- Two posting workflows exist. The **live** one is the original single daily post
-  (`.github/workflows/daily_post.yml`). A new **3-slot** workflow
-  (`.github/workflows/daily_3slot.yml`) is built and merged but **gated OFF**.
-- The plan we are moving toward: **3 posts per day** of the same section, in three
-  formats at three times: **morning text, afternoon image, night video**.
+- **LIVE since 2026-07-01: the 3-slot workflow** (`.github/workflows/daily_3slot.yml`),
+  **3 posts per day** of the same section: **morning text (12:23 UTC), afternoon image
+  (16:47), night video (20:11)**. The original single daily post
+  (`.github/workflows/daily_post.yml`) is **disabled** and kept only as the rollback
+  path (never run both: same crons, different claim keys, running both double posts).
 - Text policy is **verbatim in full**: every post carries the exact, complete,
   corrected Constitution clause. This is the load bearing accuracy mechanism.
 - Hard constraint: **no spend**. We do not pay to regenerate images (OpenAI
   gpt-image-2) or audio (ElevenLabs). We make the best of the assets we already have.
-- Nothing about live posting changes until someone flips the gate (see Go-live).
+- Rollback: `gh variable set ENABLE_3SLOT --body false`, then
+  `gh workflow enable daily_post.yml` (that order).
 
 ## What we want (the strategy)
 
@@ -83,7 +85,10 @@ where a baked image or narration is imperfect, the words a reader reads are corr
   instead of the video, because their narration is materially wrong and we will not
   broadcast wrong audio. See `WORST5_NIGHT_DAYS` in `bot.py`.
 
-## Go-live runbook (when ready to switch to 3-slot)
+## Go-live runbook (EXECUTED 2026-07-01; kept for the rollback path)
+
+This ran to completion on 2026-07-01 (see Current reality). Do not re-run it; it
+stays here because the same ordering rule governs any rollback or future re-flip.
 
 Order matters: **disable the old poster BEFORE enabling the new one**, or a cron that
 fires in between runs both and double posts.
@@ -205,8 +210,8 @@ Ordered by what unblocks the most:
 | `audio_male/`, `audio_female/` | ElevenLabs narration (same caveat) |
 | `video/` | Remotion video generator; rendered mp4s in `video/videos/` (gitignored) |
 | `claims/` | durable claim fence, one file per `<date>` and per `<date>__<slot>` |
-| `.github/workflows/daily_post.yml` | live single poster |
-| `.github/workflows/daily_3slot.yml` | gated 3-slot poster |
+| `.github/workflows/daily_post.yml` | legacy single poster (disabled; rollback path) |
+| `.github/workflows/daily_3slot.yml` | LIVE 3-slot poster |
 | `docs/THREE-SLOT.md` | 3-slot feature spec |
 | `docs/IDEMPOTENCY.md` | claim fence safety model (legacy + per slot) |
 | `docs/VIDEO-POSTING.md` | video upload mechanics + storage blocker |
