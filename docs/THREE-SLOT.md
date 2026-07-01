@@ -30,10 +30,10 @@ The night slot degrades to a safe option in three layers:
   wrong (old text baked before the verbatim correction), so at night these post the
   **image** instead of the video. See `WORST5_NIGHT_DAYS` in `bot.py`.
 - **No video file present:** the night slot falls back to the image. Videos are
-  gitignored and not present on the CI runner yet, so until they are published (a
-  GitHub Release asset), the night slot posts the image. The storage decision and its
-  options live in `docs/VIDEO-POSTING.md` (Production blocker). That blocker now gates
-  the night slot, not just the legacy `--video` path.
+  gitignored; in CI the workflow's "Fetch night video" step downloads the pinned
+  day's file from the `videos-v1` GitHub Release before posting, and any fetch
+  failure simply leaves the file absent (image fallback, never a lost slot). See
+  `docs/VIDEO-POSTING.md` (Production storage) for the release layout.
 - **Video rejected at upload:** when a video IS present but its upload or transcode is
   rejected, the post degrades to the day's image (passed alongside the video as an
   upload fallback) rather than to text only.

@@ -53,23 +53,29 @@ to the image — it never fails the run just because a video is absent.
 3. Only after a successful manual video post should `POST_VIDEO` be enabled on
    the scheduled GitHub Actions run.
 
-## Production blocker: where do the videos live?
+## Production storage: the videos-v1 release (RESOLVED 2026-07-01)
 
-The 77 rendered videos (~1.1 GB) are **gitignored**. The daily job runs on
-GitHub Actions, so the files are not present there yet. This blocker is system wide:
-it gates the 3-slot **night slot** too, not just the legacy `POST_VIDEO` path, so
-until it is resolved the night slot falls back to the image even on non worst-5 days.
-Pick one before enabling video in CI:
+The 77 rendered videos (~1.1 GB) are **gitignored**, so the GitHub Actions
+runner has none by itself. They are published as assets on the **`videos-v1`
+GitHub Release** (one `day_NN.mp4` per day plus `SHA256SUMS.txt`), and
+`daily_3slot.yml`'s "Fetch night video" step downloads the pinned day's file
+into `video/videos/` before the night post. A failed or skipped download is
+non-fatal: `resolve_video_path` finds nothing and the slot posts the image.
 
-| Option | Notes |
-|---|---|
-| **GitHub Release asset** (recommended) | Upload `videos/` as a release; the workflow downloads the day's file before posting. Keeps the repo small; no LFS billing. |
-| **Git LFS** | Commit the mp4s via LFS. Simple to consume, but uses LFS storage/bandwidth quota. |
-| **Render in CI** | Install Remotion + headless Chrome on the runner and render on demand. Heaviest; avoid unless needed. |
-| **Commit directly** | ~1.1 GB in git history — not recommended. |
+Operational notes:
 
-Until one of these is wired up, keep `POST_VIDEO` off in the scheduled workflow.
-Local/manual `--video` runs work today because the files exist on disk.
+- **Replacing an asset** (e.g. after regenerating a wrong-narration day):
+  `gh release upload videos-v1 video/videos/day_NN.mp4 --clobber`, and refresh
+  `SHA256SUMS.txt` the same way. No workflow change needed.
+- **The release is public** (the repo is public); that is fine because every
+  video is destined for the public X account anyway.
+- The legacy `POST_VIDEO` path on `daily_post.yml` has **no** fetch step and
+  still requires the files on disk; keep `POST_VIDEO` off there (it is
+  scheduled for retirement at go-live regardless).
+
+Rejected storage options, for the record: Git LFS (storage/bandwidth quota),
+render in CI (Remotion + headless Chrome on every run, heaviest), committing
+~1.1 GB into git history.
 
 ## Not included
 

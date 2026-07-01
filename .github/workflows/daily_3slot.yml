@@ -216,6 +216,34 @@ jobs:
             git reset --hard origin/main
           fi
 
+      # 1.5) Night slot only: fetch the pinned day's video from the videos-v1
+      #      release. The 77 rendered videos (~1 GB) are gitignored, so the
+      #      runner has none; without this step resolve_video_path finds nothing
+      #      and the night slot silently posts the image. Non-fatal by design:
+      #      any failure here leaves the file absent and bot.py falls back to the
+      #      image (correct content, lesser format), never a lost slot. Worst-5
+      #      days download too; compose_slot ignores the file for them, keeping
+      #      the single source of truth for that list in bot.py.
+      - name: Fetch night video
+        if: steps.claim.outputs.CLAIM_OK == 'true' && steps.cfg.outputs.SLOT == 'night'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLAIM_DATE: ${{ steps.claim.outputs.CLAIM_DATE }}
+        run: |
+          DAY="$(jq -r '.day // empty' "claims/${CLAIM_DATE}__pin.json" 2>/dev/null || echo "")"
+          case "$DAY" in
+            ''|*[!0-9]*)
+              echo "::warning::No usable pinned day for $CLAIM_DATE (got '$DAY'); skipping video fetch, the night slot will post the image."
+              exit 0 ;;
+          esac
+          FILE="$(printf 'day_%02d.mp4' "$DAY")"
+          mkdir -p video/videos
+          if gh release download videos-v1 --pattern "$FILE" --dir video/videos; then
+            echo "Fetched $FILE ($(du -h "video/videos/$FILE" | cut -f1))"
+          else
+            echo "::warning::Could not download $FILE from release videos-v1; the night slot will fall back to the image."
+          fi
+
       # 2) Post only if we won the claim. X credentials live ONLY here.
       - name: Post slot
         if: steps.claim.outputs.CLAIM_OK == 'true'
