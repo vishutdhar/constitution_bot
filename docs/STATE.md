@@ -98,6 +98,9 @@ python bot.py --preview --slot morning|afternoon|night [--day N]
 LIVE pre-flip test (the gate now allows this, PR #13): from the Actions tab open
 **Daily Constitution Post (3-slot)** -> Run workflow, leave the branch on **main**,
 pick a slot, Run. It runs even while `ENABLE_3SLOT` is unset (main ref only).
+Precondition, enforced by the workflow's **Pre-flip test fence** step: run it AFTER
+that day's normal `daily_post` post has gone out (or after `daily_post.yml` has been
+disabled). Triggered too early, the run refuses with instructions instead of posting.
 
 What a manual test actually does (verified against `bot.py`, not assumed):
 - It is a **real live post to @USC1787**, not a dry run. The `--preview` command above
@@ -112,14 +115,20 @@ What a manual test actually does (verified against `bot.py`, not assumed):
   its `post_log.json` is finalized. A manual test that OVERLAPS a `daily_post` run
   (its 12:23 / 16:47 / 20:11 UTC windows) could pin and post the SAME day twice.
   This is enforced mechanically, not by operator discipline: the workflow's
-  **Pre-flip test fence** step refuses a manual test until today's legacy claim
-  (`claims/<date>.json`) is in a terminal `posted*` state, after which every later
-  `daily_post` window hard-skips (`should_skip_for_claim`) and the overlap cannot
-  occur. Practical rule: run the test after that day's normal post has gone out; the
-  fence fails fast with instructions otherwise. The fence lives only in
-  `daily_3slot.yml` (the live poster is untouched) and self-deactivates at go-live
-  (`ENABLE_3SLOT` set skips it, and `daily_post.yml` is disabled then anyway).
-  Outside that overlap there is no duplicate/loop risk (distinct claim keys).
+  **Pre-flip test fence** step allows a manual test only when it provably cannot
+  collide. Either `daily_post.yml` is disabled in Actions (checked via the API)
+  with no legacy claim today, or BOTH of: today's legacy claim
+  (`claims/<date>.json`) is terminal `posted*` (then every later `daily_post`
+  window hard-skips via `should_skip_for_claim`) AND `state.json.current_day` has
+  advanced past the legacy-claimed day (legacy advances state only on full
+  success, so `posted_unknown`/`posted_partial` can leave `current_day` pointing
+  at a possibly-live section that the test would repost). The claim step also
+  re-checks that UTC midnight did not flip after the fence ran. Practical rule:
+  run the test after that day's normal post has gone out; the fence fails fast
+  with instructions otherwise. The fence lives only in `daily_3slot.yml` (the
+  live poster is untouched) and self-deactivates at go-live (`ENABLE_3SLOT` set
+  skips it). Outside that overlap there is no duplicate/loop risk (distinct
+  claim keys).
 
 ## What we want to do next (intentions and backlog)
 

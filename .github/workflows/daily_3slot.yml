@@ -19,10 +19,10 @@
 # only by pushing to main, and daily_post notices a 3-slot post only after its
 # post_log.json is finalized. A manual test that overlaps a daily_post run (its
 # 12:23 / 16:47 / 20:11 UTC windows) can pin and post the SAME day twice. The
-# "Pre-flip test fence" step below enforces the safe ordering mechanically: a
-# manual test is refused until today's legacy claim (claims/<date>.json) is in a
-# terminal posted* state, after which every later daily_post window hard-skips
-# and the overlap cannot occur.
+# "Pre-flip test fence" step below enforces the safe ordering mechanically; see
+# its comment for the exact conditions (daily_post.yml disabled, or today's
+# legacy claim terminal AND state advanced past the claimed day, plus a UTC
+# midnight re-check in the claim step).
 # To go live: set ENABLE_3SLOT=true AND disable daily_post.yml (else double posts).
 #
 # Idempotency reuses the per-(date,slot) claim fence (see docs/IDEMPOTENCY.md):
@@ -53,6 +53,9 @@ concurrency:
 
 permissions:
   contents: write
+  # actions:read lets the pre-flip test fence ask whether daily_post.yml is
+  # disabled (the go-live path disables it before ENABLE_3SLOT is set).
+  actions: read
 
 jobs:
   post:
@@ -98,35 +101,72 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Pre-flip test fence: while daily_post.yml is still live, a manual test may
-      # only run AFTER today's legacy post is terminal. Reason: daily_post notices
-      # a 3-slot post only once post_log.json lands with our FINALIZE push, minutes
-      # after our claim push, so a legacy cron firing inside that window could
-      # claim and post the SAME pinned day. Once claims/<date>.json is terminal
-      # (posted*), every later legacy window hard-skips (should_skip_for_claim in
-      # bot.py) and the race is closed. Statuses 'none', 'claimed' (legacy may be
-      # mid-post right now) and 'failed' (a later legacy window will retry) are all
-      # unsafe, so anything non-terminal is refused. Self-deactivating: go-live
-      # sets ENABLE_3SLOT, which skips this step (daily_post.yml is disabled then).
+      # Pre-flip test fence: a manual test may only proceed when it provably
+      # cannot collide with a legacy daily_post publication. All checks fail
+      # closed. In order:
+      #
+      # 0) If daily_post.yml is DISABLED in Actions (the go-live path disables it
+      #    before ENABLE_3SLOT is set) and legacy wrote no claim today, there is
+      #    nothing to collide with; the test may run with the crons still unarmed.
+      #    The workflow state is read via the API (hence actions:read above); an
+      #    API error assumes ACTIVE, i.e. fail-closed into checks 1 and 2.
+      #
+      # 1) While legacy can run, today's legacy claim (claims/<date>.json) must be
+      #    terminal (posted*). Until then a legacy window can still fire:
+      #    daily_post notices a 3-slot post only once post_log.json lands with our
+      #    FINALIZE push, minutes after our claim push, so a legacy cron or manual
+      #    legacy run inside that window could claim and post the SAME pinned day.
+      #    'none', 'claimed' (legacy may be mid-post right now) and 'failed' (a
+      #    later legacy window will retry) are all unsafe. Once terminal, every
+      #    later legacy window hard-skips (should_skip_for_claim in bot.py).
+      #
+      # 2) state.json current_day must have advanced PAST the legacy-claimed day.
+      #    The legacy path advances state only on full success (all_success and
+      #    not --day in bot.py), so 'posted_unknown' (crashed after posting,
+      #    before logging) and 'posted_partial' (lead tweet LIVE, thread
+      #    incomplete) leave current_day pointing at a section that may already be
+      #    live. pin_day reads current_day, so a test in that state would repost
+      #    the very section this fence exists to protect.
+      #
+      # A verdict is only valid for the UTC date it inspected, so the fence
+      # exports FENCE_DATE and the claim step aborts if midnight flipped in
+      # between (the new date's legacy claim was never checked). Self
+      # deactivating: go-live sets ENABLE_3SLOT, which skips this step.
       - name: Pre-flip test fence
+        id: fence
         if: github.event_name == 'workflow_dispatch' && vars.ENABLE_3SLOT != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           DATE="$(date -u +%F)"
+          echo "FENCE_DATE=$DATE" >> "$GITHUB_OUTPUT"
           CLAIM="claims/$DATE.json"
+          LEGACY_STATE="$(gh api "repos/$REPO/actions/workflows/daily_post.yml" --jq .state 2>/dev/null || echo active)"
+          if [ "$LEGACY_STATE" != "active" ] && [ ! -f "$CLAIM" ]; then
+            echo "daily_post.yml is $LEGACY_STATE and wrote no claim today; safe to test."
+            exit 0
+          fi
           if [ ! -f "$CLAIM" ]; then
-            STATUS="none"
+            STATUS="none"; CLAIM_DAY=""
           else
             STATUS="$(jq -r '.status // "unknown"' "$CLAIM" 2>/dev/null || echo unknown)"
+            CLAIM_DAY="$(jq -r '.day // empty' "$CLAIM" 2>/dev/null || echo "")"
           fi
+          CURRENT_DAY="$(jq -r '.current_day // empty' state.json 2>/dev/null || echo "")"
           case "$STATUS" in
-            posted|posted_partial|posted_unknown)
-              echo "Legacy post for $DATE is terminal ($STATUS); safe to test." ;;
+            posted|posted_partial|posted_unknown) ;;
             *)
-              echo "::error::Refusing the manual test: today's legacy claim status is '$STATUS'."
+              echo "::error::Refusing the manual test: today's legacy claim status is '$STATUS' and daily_post.yml is $LEGACY_STATE."
               echo "Run the test after daily_post.yml has posted today ($CLAIM shows posted*)."
-              echo "If daily_post.yml is already disabled for go-live, set ENABLE_3SLOT=true instead."
               exit 1 ;;
           esac
+          if [ -z "$CURRENT_DAY" ] || [ -z "$CLAIM_DAY" ] || [ "$CURRENT_DAY" = "$CLAIM_DAY" ]; then
+            echo "::error::Refusing the manual test: legacy claimed day '$CLAIM_DAY' ($STATUS) but state.json current_day is '$CURRENT_DAY', i.e. state has NOT advanced past it."
+            echo "The section the test would pin may already be live (legacy crashed after posting, or posted a partial thread). Check post_log.json and the live account, resolve state.json, then retry."
+            exit 1
+          fi
+          echo "Legacy post for $DATE is terminal ($STATUS) and state advanced past day $CLAIM_DAY; safe to test."
 
       # 1) Claim this slot BEFORE posting. The push is the fence. The day pin and
       #    the state advance (state.json) are part of this durable commit.
@@ -134,11 +174,21 @@ jobs:
         id: claim
         env:
           SLOT: ${{ steps.cfg.outputs.SLOT }}
+          # Empty when the fence was skipped (scheduled runs / go-live).
+          FENCE_DATE: ${{ steps.fence.outputs.FENCE_DATE }}
         run: |
           git config user.name "Constitution Bot"
           git config user.email "bot@users.noreply.github.com"
           CLAIM_DATE="$(date -u +%F)"
           echo "CLAIM_DATE=$CLAIM_DATE" >> "$GITHUB_OUTPUT"
+          # A fence verdict is only valid for the date it inspected. If UTC
+          # midnight flipped between the fence and this claim, the fence checked
+          # yesterday's legacy claim while we are about to claim today; abort
+          # before claiming rather than post on a stale verdict.
+          if [ -n "$FENCE_DATE" ] && [ "$FENCE_DATE" != "$CLAIM_DATE" ]; then
+            echo "::error::UTC date flipped between the pre-flip fence ($FENCE_DATE) and the claim ($CLAIM_DATE). Re-run the test."
+            exit 1
+          fi
           python bot.py --claim --slot "$SLOT" --date "$CLAIM_DATE"
           git add claims/ state.json
           if git diff --cached --quiet; then
