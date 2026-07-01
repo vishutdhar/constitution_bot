@@ -106,10 +106,13 @@ jobs:
       # closed. In order:
       #
       # 0) If daily_post.yml is DISABLED in Actions (the go-live path disables it
-      #    before ENABLE_3SLOT is set) and legacy wrote no claim today, there is
-      #    nothing to collide with; the test may run with the crons still unarmed.
-      #    The workflow state is read via the API (hence actions:read above); an
-      #    API error assumes ACTIVE, i.e. fail-closed into checks 1 and 2.
+      #    before ENABLE_3SLOT is set), has NO unfinished runs, and wrote no claim
+      #    today, there is nothing to collide with; the test may run with the
+      #    crons still unarmed. All three are required: disabling stops NEW
+      #    triggers only, so a legacy run queued or started before the disable
+      #    can still claim and post. Workflow state and runs are read via the API
+      #    (hence actions:read above); an API error assumes ACTIVE respectively
+      #    BUSY, i.e. fail-closed into checks 1 and 2.
       #
       # 1) While legacy can run, today's legacy claim (claims/<date>.json) must be
       #    terminal (posted*). Until then a legacy window can still fire:
@@ -144,8 +147,15 @@ jobs:
           CLAIM="claims/$DATE.json"
           LEGACY_STATE="$(gh api "repos/$REPO/actions/workflows/daily_post.yml" --jq .state 2>/dev/null || echo active)"
           if [ "$LEGACY_STATE" != "active" ] && [ ! -f "$CLAIM" ]; then
-            echo "daily_post.yml is $LEGACY_STATE and wrote no claim today; safe to test."
-            exit 0
+            # Disabling stops NEW triggers only; a run queued or started before
+            # the disable can still claim and post. Only a disabled workflow with
+            # zero unfinished runs provably cannot collide.
+            BUSY="$(gh api "repos/$REPO/actions/workflows/daily_post.yml/runs?per_page=30" --jq '[.workflow_runs[] | select(.status != "completed")] | length' 2>/dev/null || echo 1)"
+            if [ "$BUSY" = "0" ]; then
+              echo "daily_post.yml is $LEGACY_STATE with no unfinished runs and no claim today; safe to test."
+              exit 0
+            fi
+            echo "daily_post.yml is $LEGACY_STATE but has $BUSY unfinished run(s); falling through to the claim checks."
           fi
           if [ ! -f "$CLAIM" ]; then
             STATUS="none"; CLAIM_DAY=""

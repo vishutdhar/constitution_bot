@@ -116,8 +116,10 @@ What a manual test actually does (verified against `bot.py`, not assumed):
   (its 12:23 / 16:47 / 20:11 UTC windows) could pin and post the SAME day twice.
   This is enforced mechanically, not by operator discipline: the workflow's
   **Pre-flip test fence** step allows a manual test only when it provably cannot
-  collide. Either `daily_post.yml` is disabled in Actions (checked via the API)
-  with no legacy claim today, or BOTH of: today's legacy claim
+  collide. Either `daily_post.yml` is disabled in Actions with zero unfinished
+  runs (both checked via the API; disabling stops new triggers only, so a run
+  already queued or started can still post) and no legacy claim today, or BOTH
+  of: today's legacy claim
   (`claims/<date>.json`) is terminal `posted*` (then every later `daily_post`
   window hard-skips via `should_skip_for_claim`) AND `state.json.current_day` has
   advanced past the legacy-claimed day (legacy advances state only on full
