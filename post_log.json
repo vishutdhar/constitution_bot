@@ -1286,5 +1286,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2072747202334605674",
     "error": null
+  },
+  {
+    "timestamp": "2026-07-02T21:31:31.557755+00:00",
+    "day": 60,
+    "section": "Amendment XIV, Section 1 (1868)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2072795326331953463",
+    "error": null
   }
 ]
