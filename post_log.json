@@ -1559,5 +1559,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2075285807640821811",
     "error": null
+  },
+  {
+    "timestamp": "2026-07-09T21:42:45.200057+00:00",
+    "day": 67,
+    "section": "Amendment XIX (1920)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2075334867131441624",
+    "error": null
   }
 ]
