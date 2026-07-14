@@ -1754,5 +1754,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2077087900894642386",
     "error": null
+  },
+  {
+    "timestamp": "2026-07-14T21:14:08.825378+00:00",
+    "day": 72,
+    "section": "Amendment XXIII (1961)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2077139606999552005",
+    "error": null
   }
 ]
