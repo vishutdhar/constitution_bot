@@ -1884,5 +1884,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2078224997613740187",
     "error": null
+  },
+  {
+    "timestamp": "2026-07-18T13:54:07.947680+00:00",
+    "day": 76,
+    "section": "Amendment XXVI (1971)",
+    "platform": "X (Twitter)",
+    "slot": "morning",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "text",
+    "url": "https://x.com/USC1787/status/2078478426424426970",
+    "error": null
   }
 ]
