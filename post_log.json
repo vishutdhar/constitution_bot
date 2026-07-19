@@ -1949,5 +1949,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2078898485231779878",
     "error": null
+  },
+  {
+    "timestamp": "2026-07-19T21:06:01.163240+00:00",
+    "day": 77,
+    "section": "Amendment XXVII (1992)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2078949501163979192",
+    "error": null
   }
 ]
