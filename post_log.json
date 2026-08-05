@@ -2612,5 +2612,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2085066198375612520",
     "error": null
+  },
+  {
+    "timestamp": "2026-08-05T21:31:17.769048+00:00",
+    "day": 17,
+    "section": "Article I, Section 8, Cl. 1",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2085116455880958279",
+    "error": null
   }
 ]
