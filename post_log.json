@@ -2976,5 +2976,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2088672237255614605",
     "error": null
+  },
+  {
+    "timestamp": "2026-08-15T20:36:23.432118+00:00",
+    "day": 27,
+    "section": "Article II, Section 1, Cl. 1",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2088726517283270977",
+    "error": null
   }
 ]
