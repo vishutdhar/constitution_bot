@@ -3132,5 +3132,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2090122786362527745",
     "error": null
+  },
+  {
+    "timestamp": "2026-08-19T20:44:01.564134+00:00",
+    "day": 31,
+    "section": "Article II, Section 1: The Oath",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2090177989971484710",
+    "error": null
   }
 ]
