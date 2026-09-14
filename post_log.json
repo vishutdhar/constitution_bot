@@ -4120,5 +4120,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2099598463688179815",
     "error": null
+  },
+  {
+    "timestamp": "2026-09-14T23:07:00.221993+00:00",
+    "day": 57,
+    "section": "Amendment XII (1804): Part 1",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2099636056052449324",
+    "error": null
   }
 ]
