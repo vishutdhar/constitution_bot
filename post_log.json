@@ -4198,5 +4198,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2100309554055745546",
     "error": null
+  },
+  {
+    "timestamp": "2026-09-16T22:54:51.469950+00:00",
+    "day": 59,
+    "section": "Amendment XIII (1865)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2100357775012573309",
+    "error": null
   }
 ]
