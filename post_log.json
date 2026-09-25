@@ -4549,5 +4549,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2103577453608481254",
     "error": null
+  },
+  {
+    "timestamp": "2026-09-25T23:17:35.241697+00:00",
+    "day": 68,
+    "section": "Amendment XX, Sections 1-2 (1933)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2103624985449214009",
+    "error": null
   }
 ]
