@@ -4770,5 +4770,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2105702327546155493",
     "error": null
+  },
+  {
+    "timestamp": "2026-10-01T20:27:30.186465+00:00",
+    "day": 74,
+    "section": "Amendment XXV, Section 1-2 (1967)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2105756509745336684",
+    "error": null
   }
 ]
