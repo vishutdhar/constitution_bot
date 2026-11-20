@@ -6629,5 +6629,18 @@
     "media_kind": "text",
     "url": null,
     "error": "Forbidden: 403 Forbidden\nThis account cannot create Posts longer than 280 characters. Shorten the text, or subscribe to X Premium to create longer Posts. A link counts as 23 characters and an emoji as 2. | status=403 | body='{\"detail\":\"This account cannot create Posts longer than 280 characters. Shorten the text, or subscribe to X Premium to create longer Posts. A link counts as 23 characters and an emoji as 2.\",\"status\":403,\"title\":\"Forbidden\",\"type\":\"about:blank\"}' | api_messages=['This account cannot create Posts longer than 280 characters. Shorten the text, or subscribe to X Premium to create longer Posts. A link counts as 23 characters and an emoji as 2.']"
+  },
+  {
+    "timestamp": "2026-11-20T22:49:47.313262+00:00",
+    "day": 46,
+    "section": "Amendment I (1791)",
+    "platform": "X (Twitter)",
+    "slot": "afternoon",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "image",
+    "url": "https://x.com/USC1787/status/2123911710251655534",
+    "error": null
   }
 ]
