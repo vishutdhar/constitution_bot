@@ -6837,5 +6837,18 @@
     "media_kind": "image",
     "url": "https://x.com/USC1787/status/2125751703790133408",
     "error": null
+  },
+  {
+    "timestamp": "2026-11-26T02:49:10.224096+00:00",
+    "day": 52,
+    "section": "Amendment VII (1791)",
+    "platform": "X (Twitter)",
+    "slot": "night",
+    "success": true,
+    "partial": false,
+    "uncertain": false,
+    "media_kind": "video",
+    "url": "https://x.com/USC1787/status/2125783891734667724",
+    "error": null
   }
 ]
